@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const body = await req.json();
 
+    console.log("Received body:", body);
     const parsed = bookProductSchema.safeParse(body);
+    console.log("Parsed data:", parsed);
     if (!parsed.success) {
         return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
     }

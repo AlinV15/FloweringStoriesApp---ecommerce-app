@@ -5,7 +5,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
         <div className="min-h-screen flex">
             {/* Sidebar vizibil permanent pe desktop */}
-            <div className="hidden md:block w-1/5 bg-gradient-to-b from-blue-50 to-blue-100 shadow-lg">
+            <div className="hidden md:block w-60 bg-gradient-to-b from-[#f5e1dd] to-[#f3c4ba] shadow-lg">
                 <Sidebar />
             </div>
 

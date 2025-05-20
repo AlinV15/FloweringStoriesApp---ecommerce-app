@@ -1,18 +1,19 @@
-'use client'
+'use client';
 
-import { Menu } from 'lucide-react'
-import { useState } from 'react'
-import Sidebar from './Sidebar'
+import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
+import Sidebar from './Sidebar';
 
 const SidebarDrawer = () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
 
     return (
-        <div className='flex flex-col justify-center items-center'>
-            {/* Buton vizibil DOAR pe mobil */}
+        <div className="md:hidden">
+            {/* Mobile Menu Button */}
             <button
-                className="md:hidden p-4 text-sky-800 fixed top-0 right-0 z-50"
+                className="p-3 text-[#9c6b63] fixed top-4 right-4 z-50 bg-white/90 rounded-full shadow-lg hover:bg-[#f5e1dd] transition"
                 onClick={() => setOpen(true)}
+                aria-label="Open sidebar"
             >
                 <Menu className="h-6 w-6" />
             </button>
@@ -20,26 +21,27 @@ const SidebarDrawer = () => {
             {/* Overlay + Drawer */}
             {open && (
                 <div className="fixed inset-0 z-40 flex">
-                    {/* Overlay semi-transparent */}
+                    {/* Overlay */}
                     <div
-                        className="bg-black/30 w-full"
-                        onClick={() => setOpen(!open)}
+                        className="bg-black/30 w-full backdrop-blur-sm"
+                        onClick={() => setOpen(false)}
                     ></div>
 
-                    {/* Sidebar actual */}
-                    <div className="w-72 bg-gradient-to-b from-blue-50 to-blue-100 p-6 min-h-screen shadow-lg z-50 flex flex-col pt-16">
-                        <Sidebar />
+                    {/* Sidebar */}
+                    <div className="w-72 bg-gradient-to-b from-[#fdf8f6] to-[#f7eae6] p-6 min-h-screen shadow-lg z-50 flex flex-col relative animate-slide-in">
                         <button
                             onClick={() => setOpen(false)}
-                            className="mt-4 text-red-600 text-sm hover:underline"
+                            className="absolute top-4 right-4 text-[#9c6b63] hover:text-[#8a5b53]"
+                            aria-label="Close sidebar"
                         >
-                            Close
+                            <X className="h-5 w-5" />
                         </button>
+                        <Sidebar />
                     </div>
                 </div>
             )}
         </div>
-    )
-}
+    );
+};
 
-export default SidebarDrawer
+export default SidebarDrawer;
