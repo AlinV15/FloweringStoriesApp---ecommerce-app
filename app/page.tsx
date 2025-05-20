@@ -1,10 +1,66 @@
+'use client'
 import Image from "next/image";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { ArrowRight, BookOpen, ChevronRight, Gift, LucideFlower, Star } from "lucide-react";
 import Link from "next/link";
+import { useProductStore } from "./stores/ProductStore";
+import { use, useEffect } from "react";
+import { getAverageRating } from "@/lib/utils/rating";
+import ProductCard from "./components/ProductCard";
+
+interface Collections {
+  img: string;
+  alt: string;
+  title: string;
+  description: string;
+  link: string;
+}
 
 export default function Home() {
+  //using the zustand store to get the products
+  const fetchProducts = useProductStore((state) => state.fetchProducts);
+  const loading = useProductStore((state) => state.loading);
+  const error = useProductStore((state) => state.error);
+  const getFeatured = useProductStore((state) => state.getFeatured);
+  const getBestseller = useProductStore((state) => state.getBestseller);
+  const getNewest = useProductStore((state) => state.getNewest);
+
+  useEffect(() => {
+    fetchProducts();
+  }
+    , [fetchProducts]);
+
+  const featuredProducts = getFeatured();
+  const bestseller = getBestseller();
+  const newestProduct = getNewest();
+
+  // Manage collections
+  const collections: Collections[] = [
+    {
+      img: "/books-category.png",
+      alt: "A cozy reading corner with stacked books, a cup of tea, and warm lighting",
+      title: "Books",
+      description: "Fiction, Non-fiction, Children's books, and more",
+      link: "/books"
+    },
+    {
+      img: "/stationary-category.jpg",
+      alt: "Elegant stationery set with journals, pens, cards, and bookmarks on a wooden desk",
+      title: "Stationery",
+      description: "Journals, Cards, Bookmarks, and Writing Tools",
+      link: "/products/stationeries"
+    },
+    {
+      img: "/flowers-category.jpg",
+      alt: "A bouquet of dried and fresh flowers arranged artistically with a book beside it",
+      title: "Floral Arrangements",
+      description: "Dried Flowers, Bookish Bouquets, and Plant Accessories",
+      link: "/products/flowers"
+    }
+  ];
+
+
   return (
     <div>
       <Header />
@@ -59,67 +115,29 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Books Category */}
-            <div className="group relative rounded-xl overflow-hidden h-80 cursor-pointer">
-              <Image
-                src="/books-category.jpg"
-                alt="Books Collection"
-                fill
-                className="object-cover group-hover:scale-105 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white text-2xl font-medium mb-2">Books</h3>
-                <p className="text-white/80 mb-4">Fiction, Non-fiction, Children's books, and more</p>
-                <Link
-                  href="/products/books"
-                  className="text-white flex items-center text-sm font-medium"
-                >
-                  Browse Books
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+            {collections.map((collection) => (
+              <div className="group relative rounded-xl overflow-hidden h-80 cursor-pointer" key={collection.title}>
+                <Image
+                  src={collection.img}
+                  alt={collection.alt}
+                  fill
+                  className="object-cover group-hover:scale-105 transition duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
+                  <h3 className="text-white text-2xl font-medium mb-2">{collection.title}</h3>
+                  <p className="text-white/80 mb-4">{collection.description}</p>
+                  <Link
+                    href={collection.link}
+                    className="text-white flex items-center text-sm font-medium"
+                  >
+                    Browse {collection.title}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </div>
               </div>
-            </div>
+            ))}
 
-            {/* Stationery Category */}
-            <div className="group relative rounded-xl overflow-hidden h-80 cursor-pointer">
-              <Image
-                src="/stationery-category.jpg"
-                alt="Stationery Collection"
-                fill
-                className="object-cover group-hover:scale-105 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white text-2xl font-medium mb-2">Stationery</h3>
-                <p className="text-white/80 mb-4">Journals, Cards, Bookmarks, and Writing Tools</p>
-                <Link
-                  href="/products/stationery"
-                  className="text-white flex items-center text-sm font-medium"
-                >
-                  Browse Stationery
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
 
-            {/* Floral Category */}
-            <div className="group relative rounded-xl overflow-hidden h-80 cursor-pointer">
-              <Image
-                src="/floral-category.jpg"
-                alt="Floral Collection"
-                fill
-                className="object-cover group-hover:scale-105 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white text-2xl font-medium mb-2">Floral Arrangements</h3>
-                <p className="text-white/80 mb-4">Dried Flowers, Bookish Bouquets, and Plant Accessories</p>
-                <Link
-                  href="/products/floral"
-                  className="text-white flex items-center text-sm font-medium"
-                >
-                  Browse Arrangements
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -134,121 +152,16 @@ export default function Home() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Product 1 */}
-              <div className="group">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
-                  <Image
-                    src="/product-book1.jpg"
-                    alt="The Secret Garden - Special Edition"
-                    fill
-                    className="object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute top-2 right-2 bg-[#9c6b63] text-white text-xs px-2 py-1 rounded">
-                    Bestseller
-                  </div>
-                </div>
-                <h3 className="font-medium text-neutral-800 mb-1">The Secret Garden - Special Edition</h3>
-                <div className="flex items-center mb-1">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    ))}
-                  </div>
-                  <span className="text-xs text-neutral-500 ml-1">(42)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-[#9c6b63]">$24.99</p>
-                  <button className="text-xs bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] py-1 px-3 rounded transition">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
+              {/* Featured Products */}
+              {
+                featuredProducts.map((product) => (
+                  <Link key={product._id} href={`/products/${product._id}`} className="group">
 
-              {/* Product 2 */}
-              <div className="group">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
-                  <Image
-                    src="/product-stationery1.jpg"
-                    alt="Floral Notebook Set"
-                    fill
-                    className="object-cover group-hover:scale-105 transition duration-300"
-                  />
-                </div>
-                <h3 className="font-medium text-neutral-800 mb-1">Floral Notebook Set</h3>
-                <div className="flex items-center mb-1">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-300'}`} />
-                    ))}
-                  </div>
-                  <span className="text-xs text-neutral-500 ml-1">(18)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-[#9c6b63]">$18.50</p>
-                  <button className="text-xs bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] py-1 px-3 rounded transition">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
+                    <ProductCard product={product} bestseller={bestseller} newestProduct={newestProduct} />
+                  </Link>))
+              }
 
-              {/* Product 3 */}
-              <div className="group">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
-                  <Image
-                    src="/product-floral1.jpg"
-                    alt="Literary Dried Flower Arrangement"
-                    fill
-                    className="object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute top-2 right-2 bg-[#9c6b63] text-white text-xs px-2 py-1 rounded">
-                    New
-                  </div>
-                </div>
-                <h3 className="font-medium text-neutral-800 mb-1">Literary Dried Flower Arrangement</h3>
-                <div className="flex items-center mb-1">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < 5 ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-300'}`} />
-                    ))}
-                  </div>
-                  <span className="text-xs text-neutral-500 ml-1">(7)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-[#9c6b63]">$32.00</p>
-                  <button className="text-xs bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] py-1 px-3 rounded transition">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-
-              {/* Product 4 */}
-              <div className="group">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
-                  <Image
-                    src="/product-book2.jpg"
-                    alt="Poetry Collection - Blooming Words"
-                    fill
-                    className="object-cover group-hover:scale-105 transition duration-300"
-                  />
-                </div>
-                <h3 className="font-medium text-neutral-800 mb-1">Poetry Collection - Blooming Words</h3>
-                <div className="flex items-center mb-1">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-300'}`} />
-                    ))}
-                  </div>
-                  <span className="text-xs text-neutral-500 ml-1">(23)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-[#9c6b63]">$19.99</p>
-                  <button className="text-xs bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] py-1 px-3 rounded transition">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
             </div>
-
             <div className="text-center mt-10">
               <Link
                 href="/products"

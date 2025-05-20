@@ -6,10 +6,12 @@ import { useState, useEffect, useRef } from "react";
 import { ShoppingCart, Menu, X, Divide } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
+
 export default function Header() {
     const [showCart, setShowCart] = useState(false);
     const [mobileMenu, setMobileMenu] = useState(false);
     const cartRef = useRef(null);
+
 
     const toggleCart = () => setShowCart(!showCart);
     const toggleMobileMenu = () => setMobileMenu(!mobileMenu);
@@ -17,7 +19,7 @@ export default function Header() {
 
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
-    //console.log(session?.user)
+
 
 
     // Handle clicks outside the cart
@@ -84,10 +86,10 @@ export default function Header() {
                         </Link>
                         {isAdmin && (
                             <Link
-                                href="/admin/dashboard"
-                                className="relative group py-2"
+                                href="/admin"
+                                className="relative group py-2 cursor-pointer"
                             >
-                                <span>Dashboard</span>
+                                <span>Admin</span>
                                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
                             </Link>
                         )}
@@ -99,7 +101,7 @@ export default function Header() {
                                 !session && <div className="hidden md:flex items-center space-x-6 text-sm"><Link href="/login" className="hover:text-pink-600 transition">Sign In</Link>
                                     <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link></div>
                             }
-                            {session && <button onClick={() => signOut({ callbackUrl: "/" })} className="hover:text-pink-600 transition">Sign out</button>}
+                            {session && <button onClick={() => signOut({ callbackUrl: "/" })} className="hover:text-pink-600 transition cursor-pointer">Sign out</button>}
                         </div>
 
                         <button onClick={toggleCart} className="relative p-2 hover:bg-[#f5e1dd] rounded-full transition">
