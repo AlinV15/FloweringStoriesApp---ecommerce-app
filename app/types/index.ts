@@ -1,8 +1,10 @@
 //interfate pentru diferitele tipuri de colectii
 export interface Subcategory {
     _id: string;
+    name: string;
     description: string;
     image: string;
+    type: string;
 }
 
 export interface Review {

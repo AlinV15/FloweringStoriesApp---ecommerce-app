@@ -15,6 +15,7 @@ interface ProductStore {
     getFeatured: () => ProductEntry[];
     getBestseller: () => ProductEntry | null;
     getNewest: () => ProductEntry | null;
+    updateProduct: (id: string, data: Partial<ProductEntry>) => Promise<ProductEntry | null>;
 }
 
 export const useProductStore = create<ProductStore>((set, get) => ({
@@ -52,6 +53,33 @@ export const useProductStore = create<ProductStore>((set, get) => ({
 
     getBestseller: () => getBestseller(get().products),
     getNewest: () => getNewestProduct(get().products),
+    updateProduct: async (id: string, data: Partial<ProductEntry>) => {
+        try {
+            const res = await fetch(`/api/product/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!res.ok) throw new Error("Failed to update product");
+
+            const updatedProduct = await res.json();
+
+            // Update the product in the local state
+            set(state => ({
+                products: state.products.map(p =>
+                    p._id === id ? { ...p, ...updatedProduct.product } : p
+                )
+            }));
+
+            return updatedProduct.product;
+        } catch (err: any) {
+            set({ error: err.message });
+            return null;
+        }
+    },
 }));
 
 

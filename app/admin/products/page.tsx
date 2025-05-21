@@ -3,7 +3,7 @@
 import { useProductStore } from '@/app/stores/ProductStore';
 import { useEffect, useState } from 'react';
 import ProductFilterBar from '../components/ProductFilterBar';
-import ProductTable from '../components/ProductTable';
+import { ProductTable } from '../components/ProductTable';
 import ProductFormModal from '../components/ProductFormModal';
 import { Plus } from 'lucide-react';
 
@@ -14,6 +14,8 @@ const AdminAllProductsPage = () => {
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    console.log('Products:', products);
 
     return (
         <div className="p-6 bg-[#fffaf7] min-h-screen">
