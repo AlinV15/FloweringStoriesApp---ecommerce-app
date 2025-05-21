@@ -25,9 +25,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json(user);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.id !== params.id) {
+
+
+
+    if (!session || session.user.role !== "admin") {
         return NextResponse.json({ error: "Acces interzis" }, { status: 403 });
     }
 
@@ -37,7 +40,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updateUserSchema = z.object({
         firstName: z.string().optional(),
         lastName: z.string().optional(),
-        password: z.string().min(6).optional()
+        birthDate: z.string().optional(),
+        genre: z.enum(["man", "woman", "other"]).optional(),
+        role: z.enum(["user", "admin"]).optional(),
     });
 
     const parsed = updateUserSchema.safeParse(body);
@@ -58,7 +63,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.id !== params.id) {
+
+    if (!session || session.user.role !== "admin") {
         return NextResponse.json({ error: "Acces interzis" }, { status: 403 });
     }
 

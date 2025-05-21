@@ -46,3 +46,12 @@ export async function POST(req: NextRequest) {
     }
 }
 
+export async function GET(req: NextRequest) {
+    try {
+        await connectToDatabase();
+        const users = await User.find({}, { password: 0 }); // Exclude password from the response
+        return NextResponse.json(users);
+    } catch (error) {
+        return NextResponse.json({ error: "Eroare internă" }, { status: 500 });
+    }
+}
