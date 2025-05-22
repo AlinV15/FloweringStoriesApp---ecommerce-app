@@ -6,6 +6,7 @@ import { getBestseller, getFeaturedProductsBayesian, getNewestProduct } from '@/
 
 interface ProductStore {
     products: ProductEntry[];
+
     allProducts: ProductEntry[]; // ✅ adăugat aici
     loading: boolean;
     error: string | null;
@@ -21,7 +22,6 @@ interface ProductStore {
 export const useProductStore = create<ProductStore>((set, get) => ({
     products: [],
     allProducts: [], // ✅ inițializare
-
     loading: false,
     error: null,
 
@@ -45,6 +45,7 @@ export const useProductStore = create<ProductStore>((set, get) => ({
             set({ error: err.message, loading: false });
         }
     },
+
 
     getFeatured: () => {
         const { products } = get();

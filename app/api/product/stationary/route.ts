@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import Book from "@/lib/models/Book";
 import Product from "@/lib/models/Product";
-import { bookSchema, flowerSchema, productSchema, stationarySchema } from "@/lib/validators";
+import { productSchema, stationarySchema } from "@/lib/validators";
 import { z } from "zod";
 import Stationary from "@/lib/models/Stationary";
 import { getServerSession } from "next-auth";
@@ -39,6 +38,7 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const body = await req.json();
 
+
     const parsed = stnyProductSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
@@ -53,12 +53,12 @@ export async function POST(req: NextRequest) {
             ...product,
             refId: createdStny._id,
             type: "stationary",
-            typeRef: "stationary"
+            typeRef: "Stationary"
         });
 
-        return NextResponse.json({ book: createdStny, product: createdProduct }, { status: 201 });
+        return NextResponse.json({ createdStny, product: createdProduct }, { status: 201 });
     } catch (error) {
-        console.error("Eroare la creare carte + produs:", error);
+        console.error("Error in creating the product or stationary", error);
         return NextResponse.json({ message: "Server error", error }, { status: 500 });
     }
 }

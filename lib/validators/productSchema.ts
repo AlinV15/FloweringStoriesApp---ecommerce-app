@@ -4,7 +4,7 @@ export const productSchema = z.object({
     type: z.enum(["book", "stationary", "flower"], {
         errorMap: () => ({ message: "Tipul trebuie să fie 'book', 'stationary' sau 'flower'." })
     }),
-    typeRef: z.enum(["Book", "Stationary", "Flower"]),
+    typeRef: z.enum(["book", "stationary", "flower"]),
     refId: z.string().min(1, { message: "ID-ul referinței este necesar." }).optional(),
 
     name: z.string().min(2, { message: "Numele trebuie să aibă minim 2 caractere." }),

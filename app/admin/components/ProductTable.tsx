@@ -1,65 +1,43 @@
 'use client';
 
-import { useState, useCallback, useMemo, use, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ProductEntry } from '@/app/types/index';
 import ProductRow from './ProductRow';
 import ProductFormModal from './ProductFormModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-import SubcategoryFormModal from './SubcategoryFormModal';
 import ManageSubcategoriesModal from './ManageSubcategoriesModal';
+import { Plus, RefreshCw } from 'lucide-react';
+import { useProductStore } from '@/app/stores/ProductStore';
 
 interface Props {
-    products: ProductEntry[];
+    onAddProduct?: () => void;
+    className?: string;
+    showAddButton?: boolean;
+    showRefreshButton?: boolean;
 }
 
-type SortableKey = 'name' | 'type' | 'price' | 'stock';
-
-export const ProductTable = ({ products: initialProducts }: Props) => {
+export const ProductTable = ({
+    onAddProduct,
+    className = '',
+    showAddButton = true,
+    showRefreshButton = true
+}: Props) => {
+    // Modal states
     const [selectedProduct, setSelectedProduct] = useState<ProductEntry | null>(null);
     const [deleteProduct, setDeleteProduct] = useState<ProductEntry | null>(null);
-    const [sortKey, setSortKey] = useState<SortableKey>('name');
-    const [sortAsc, setSortAsc] = useState(true);
     const [subcategoryProduct, setSubcategoryProduct] = useState<ProductEntry | null>(null);
-    const [products, setProducts] = useState<ProductEntry[]>(initialProducts || []);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-
-    // Memoize the sorted products to prevent unnecessary recalculations
-    const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => {
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-
-            if (typeof aValue === 'number' && typeof bValue === 'number') {
-                return sortAsc ? aValue - bValue : bValue - aValue;
-            } else {
-                return sortAsc
-                    ? String(aValue).localeCompare(String(bValue))
-                    : String(bValue).localeCompare(String(aValue));
-            }
-        });
-    }, [products, sortKey, sortAsc]);
-
-    const fetchProducts = async () => {
-        try {
-            const res = await fetch('/api/product');
-            const data = await res.json();
-            //console.log('Fetched products:', data);
-            setProducts(data.products);
-        } catch (err) {
-            console.error('Failed to fetch products:', err);
-        }
-    };
+    // Get filtered products from store (ProductFilterBar handles the filtering)
+    const { products, allProducts, fetchProducts } = useProductStore();
 
     useEffect(() => {
-        fetchProducts();
-    }
-        , []);
+        if (!allProducts.length) {
+            fetchProducts();
+        }
+    }, [fetchProducts, allProducts.length]);
 
-    //console.log('Products:', products);
-
-
-    // Memoize event handlers to prevent unnecessary rerenders of child components
+    // Event handlers
     const handleEdit = useCallback((product: ProductEntry) => {
         setSelectedProduct(product);
     }, []);
@@ -84,93 +62,135 @@ export const ProductTable = ({ products: initialProducts }: Props) => {
         setSubcategoryProduct(null);
     }, []);
 
-    const toggleSort = useCallback((key: SortableKey) => {
-        setSortKey(prevKey => {
-            if (prevKey === key) {
-                setSortAsc(prev => !prev);
-                return prevKey;
-            } else {
-                setSortAsc(true);
-                return key;
-            }
-        });
-    }, []);
+    const handleRefresh = useCallback(async () => {
+        setIsRefreshing(true);
+        try {
+            await fetchProducts();
+        } catch (error) {
+            console.error('Failed to refresh products:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [fetchProducts]);
 
-    // Memoize the header renderer to improve readability
-    const renderHeader = useCallback((label: string, key: SortableKey) => (
-        <th
-            className={`p-3 text-left cursor-pointer select-none transition-colors duration-200 ${sortKey === key ? 'bg-[#fcefe9] text-[#9c6b63] font-semibold' : 'text-neutral-600'
-                } hover:bg-[#fcefe9]`}
-            onClick={() => toggleSort(key)}
-        >
-            <div className="flex items-center gap-1">
-                {label}
-                {sortKey === key ? (
-                    sortAsc ? <ChevronUp className="w-4 h-4 text-[#9c6b63]" /> : <ChevronDown className="w-4 h-4 text-[#9c6b63]" />
-                ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-300" />
-                )}
-            </div>
-        </th>
-    ), [sortKey, sortAsc, toggleSort]);
+    const refreshProducts = useCallback(async () => {
+        await handleRefresh();
+    }, [handleRefresh]);
+
+    // Use the filtered products from the store (filtered by ProductFilterBar)
+    const displayProducts = products || [];
+    const totalProducts = allProducts.length;
+    const isDisplayLoading = isRefreshing;
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 bg-white shadow-md rounded-xl">
-                <thead className="bg-[#fdf4f1]">
-                    <tr>
-                        <th className="p-3 text-left text-[#9c6b63]">Image</th>
-                        {renderHeader('Name', 'name')}
-                        {renderHeader('Type', 'type')}
-                        {renderHeader('Price', 'price')}
-                        {renderHeader('Stock', 'stock')}
-                        <th className="p-3 text-left text-[#9c6b63]">Subcategories</th>
-                        <th className="p-3 text-left text-[#9c6b63]">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {sortedProducts.map((product) => (
-                        <ProductRow
-                            key={product._id}
-                            product={product}
-                            onEdit={() => handleEdit(product)}
-                            onDelete={() => handleDelete(product)}
-                            onManageSubcategories={() => handleManageSubcategories(product)}
-                        />
-                    ))}
-                </tbody>
-            </table>
+        <div className={`space-y-4 ${className}`}>
+            {/* Header with controls */}
+            <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                    Showing {displayProducts.length} of {totalProducts} products
+                </div>
 
+                <div className="flex gap-2">
+                    {showRefreshButton && (
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isDisplayLoading}
+                            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Refresh products"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                        </button>
+                    )}
+
+                    {showAddButton && onAddProduct && (
+                        <button
+                            onClick={onAddProduct}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#9c6b63] text-white rounded-md hover:bg-[#8a5a52] transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Product
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200 bg-white shadow-md rounded-xl">
+                    <thead className="bg-[#fdf4f1]">
+                        <tr>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Image</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Name</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Type</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Price</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Stock</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Subcategories</th>
+                            <th className="p-3 text-left text-[#9c6b63] font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {isDisplayLoading ? (
+                            <tr>
+                                <td colSpan={7} className="p-8 text-center text-gray-500">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#9c6b63]"></div>
+                                        Loading products...
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : displayProducts.length === 0 ? (
+                            <tr>
+                                <td colSpan={7} className="p-8 text-center text-gray-500">
+                                    {totalProducts === 0
+                                        ? 'No products found. Add your first product to get started.'
+                                        : 'No products match your current filters. Try adjusting your search criteria.'
+                                    }
+                                </td>
+                            </tr>
+                        ) : (
+                            displayProducts.map((product) => (
+                                <ProductRow
+                                    key={product._id}
+                                    product={product}
+                                    onEdit={() => handleEdit(product)}
+                                    onDelete={() => handleDelete(product)}
+                                    onManageSubcategories={() => handleManageSubcategories(product)}
+                                />
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modals */}
             {selectedProduct && (
                 <ProductFormModal
                     mode="edit"
                     initialData={selectedProduct}
                     onClose={handleCloseEditModal}
+
                 />
             )}
 
             {deleteProduct && (
                 <DeleteConfirmModal
-                    productId={deleteProduct._id}
+                    productId={deleteProduct.refId}
                     type={deleteProduct.type}
                     onClose={handleCloseDeleteModal}
+
                 />
             )}
 
-            {/* You would need to implement a SubcategoryModal component */}
             {subcategoryProduct && (
                 <ManageSubcategoriesModal
                     productId={subcategoryProduct._id}
                     currentType={subcategoryProduct.type}
                     currentSubcategories={subcategoryProduct.subcategories}
                     onClose={handleCloseSubcategoryModal}
-                    onUpdated={async () => {
-                        await fetchProducts();
-                        handleCloseSubcategoryModal();
-                    }}
+                    onUpdated={refreshProducts}
                 />
             )}
         </div>
     );
 };
-

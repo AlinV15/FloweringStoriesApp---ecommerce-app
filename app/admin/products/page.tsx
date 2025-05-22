@@ -15,7 +15,7 @@ const AdminAllProductsPage = () => {
         fetchProducts();
     }, [fetchProducts]);
 
-    console.log('Products:', products);
+    //console.log('Products:', products);
 
     return (
         <div className="p-6 bg-[#fffaf7] min-h-screen">
@@ -34,7 +34,7 @@ const AdminAllProductsPage = () => {
                 <ProductFilterBar />
             </div>
 
-            <ProductTable products={products} />
+            <ProductTable />
 
             {showAddModal && (
                 <ProductFormModal

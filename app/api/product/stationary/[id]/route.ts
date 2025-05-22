@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import Stationary from "@/lib/models/Book";
+import Stationary from "@/lib/models/Stationary";
 import Product from "@/lib/models/Product";
 import { stationarySchema, productSchema } from "@/lib/validators";
 import { z } from "zod";
@@ -10,8 +10,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // GET /api/product/flower/[id]
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+    const par = await params;
+    const id = par.id;
+    // console.log("ID:", id);
     await connectToDatabase();
-    const stnry = await Stationary.findById(params.id);
+    const stnry = await Stationary.findById(id);
+    //  console.log(stnry);
     if (!stnry) return NextResponse.json({ error: "Stationary not found" }, { status: 404 });
     return NextResponse.json(stnry);
 }

@@ -6,7 +6,8 @@ import Product from "@/lib/models/Product";
 export async function GET() {
     try {
         await connectToDatabase();
-        const products = await Product.find().populate('subcategories'); // Optionally: `.populate('refId')`
+        const products = await Product.find().populate('subcategories');
+
         return NextResponse.json({ products });
     } catch (err) {
         return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });

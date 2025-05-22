@@ -147,9 +147,9 @@ ActionButton.displayName = 'ActionButton';
 
 const ProductRow = memo(({ product, onEdit, onDelete, onManageSubcategories }: Props) => {
     const [imageError, setImageError] = useState(false);
-    const formattedPrice = new Intl.NumberFormat('ro-RO', {
+    const formattedPrice = new Intl.NumberFormat('fr-Fr', {
         style: 'currency',
-        currency: 'RON',
+        currency: 'EUR',
         minimumFractionDigits: 2
     }).format(product.price);
 
@@ -175,11 +175,12 @@ const ProductRow = memo(({ product, onEdit, onDelete, onManageSubcategories }: P
 
     // Safely calculate discounted price if available
     const finalPrice = product.discount ? product.price * (1 - product.discount / 100) : product.price;
-    const formattedFinalPrice = new Intl.NumberFormat('ro-RO', {
+    const formattedFinalPrice = new Intl.NumberFormat('fr-FR', {
         style: 'currency',
-        currency: 'RON',
+        currency: 'EUR',
         minimumFractionDigits: 2
     }).format(finalPrice);
+
 
     return (
         <tr className="border-t border-neutral-200 hover:bg-[#fdf4f1]/60 transition duration-200">

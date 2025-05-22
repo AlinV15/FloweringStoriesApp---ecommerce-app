@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import Flower from "@/lib/models/Book";
+import Flower from "@/lib/models/Flower";
 import Product from "@/lib/models/Product";
 import { flowerSchema, productSchema } from "@/lib/validators";
 import { z } from "zod";
@@ -10,9 +10,11 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // GET /api/product/flower/[id]
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+    const par = await params;
+    const id = par.id;
     await connectToDatabase();
-    const flwr = await Flower.findById(params.id);
-    if (!flwr) return NextResponse.json({ error: "Book not found" }, { status: 404 });
+    const flwr = await Flower.findById(id);
+    if (!flwr) return NextResponse.json({ error: "Flower not found" }, { status: 404 });
     return NextResponse.json(flwr);
 }
 

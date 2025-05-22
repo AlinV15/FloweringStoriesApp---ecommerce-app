@@ -10,7 +10,7 @@ interface Props {
 }
 
 const DeleteConfirmModal = ({ productId, onClose, type }: Props) => {
-    const { setProducts } = useProductStore();
+    const { fetchProducts } = useProductStore();
 
     const handleDelete = async () => {
         let res;
@@ -35,9 +35,7 @@ const DeleteConfirmModal = ({ productId, onClose, type }: Props) => {
             }
             if (res) {
                 toast.success('Product deleted successfully!');
-                const updated = await fetch('/api/product');
-                const data = await updated.json();
-                setProducts(data);
+                fetchProducts();
                 onClose();
             } else {
                 throw new Error();

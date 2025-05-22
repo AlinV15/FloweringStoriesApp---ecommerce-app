@@ -10,8 +10,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // GET /api/product/book/[id]
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+    const par = await params;
+    const id = par.id;
     await connectToDatabase();
-    const book = await Book.findById(params.id);
+    const book = await Book.findById(id);
     if (!book) return NextResponse.json({ error: "Book not found" }, { status: 404 });
     return NextResponse.json(book);
 }
