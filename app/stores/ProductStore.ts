@@ -35,6 +35,7 @@ export const useProductStore = create<ProductStore>((set, get) => ({
             const res = await fetch('/api/product');
             if (!res.ok) throw new Error("Failed to fetch products");
             const data = await res.json();
+            console.log("Fetched products:", data.products); // Debugging line
 
             set({
                 allProducts: data.products,

@@ -9,12 +9,12 @@ const ProductSchema = new mongoose.Schema({
   refId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    refPath: 'typeRef'
+    refPath: 'typeRef',  // va popula referința pe baza valorii din 'typeRef'
   },
   typeRef: {
     type: String,
     required: true,
-    enum: ['Book', 'Stationary', 'Flower']
+    enum: ['Book', 'Stationary', 'Flower'], // va selecta colecția corectă pe baza acestei valori
   },
   price: Number,
   name: String,

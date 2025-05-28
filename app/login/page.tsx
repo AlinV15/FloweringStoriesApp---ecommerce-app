@@ -28,7 +28,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fdf8f6] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-[#fdf8f6] flex items-center justify-center px-4 text-neutral-700">
             <form onSubmit={handleLogin} className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md space-y-6">
                 <h1 className="text-3xl font-light text-[#9c6b63] text-center">Autentificare</h1>
 

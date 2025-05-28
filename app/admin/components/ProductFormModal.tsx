@@ -135,6 +135,8 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
             let res;
             let typeData = null;
 
+            console.log('Fetching initial data for product:', initialData.refId);
+
             // Fetch type-specific data
             switch (initialData?.type) {
                 case 'book':

@@ -18,9 +18,8 @@ interface AppUser {
     id: string;
     email: string;
     name: string;
-    role: "user" | "admin"; // ✅ explicit, conform NextAuth types
+    role: "user" | "admin";
 }
-
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -40,7 +39,7 @@ export const authOptions: NextAuthOptions = {
             },
             async authorize(credentials): Promise<AppUser | null> {
                 if (!credentials?.email || !credentials?.password) {
-                    throw new Error("Email și parolă lipsă.");
+                    throw new Error("Email and password are required.");
                 }
 
                 await connectToDatabase();
@@ -48,23 +47,24 @@ export const authOptions: NextAuthOptions = {
                     _id: string;
                     email: string;
                     password: string;
-                    name?: string;
+                    firstName?: string;
+                    lastName?: string;
                     role?: "user" | "admin"
                 };
 
                 if (!user || !user.password) {
-                    throw new Error("Utilizator inexistent.");
+                    throw new Error("User not found.");
                 }
 
                 const isValid = await bcrypt.compare(credentials.password, user.password);
                 if (!isValid) {
-                    throw new Error("Parolă incorectă.");
+                    throw new Error("Invalid password.");
                 }
 
                 return {
                     id: user._id.toString(),
                     email: user.email,
-                    name: user.name || user.email,
+                    name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
                     role: user.role || "user",
                 };
             },
@@ -87,7 +87,7 @@ export const authOptions: NextAuthOptions = {
                     const firstName = (profile as any)?.given_name || user.name?.split(" ")[0] || "";
                     const lastName = (profile as any)?.family_name || user.name?.split(" ").slice(1).join(" ") || "";
 
-                    // Generează parolă random și o hash-uiește
+                    // Generate random password and hash it
                     const randomPassword = crypto.randomBytes(16).toString("hex");
                     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -95,9 +95,10 @@ export const authOptions: NextAuthOptions = {
                         email: user.email,
                         firstName,
                         lastName,
-                        password: hashedPassword, // acum e mereu prezent
-                        role: user.role,
-                        image: user.image,
+                        password: hashedPassword,
+                        role: "user", // Default role
+                        // birthDate and genre are optional, so they can be null/undefined initially
+                        // favoriteProducts, orders, and address arrays/refs are empty by default
                     });
                 }
             }
@@ -106,18 +107,18 @@ export const authOptions: NextAuthOptions = {
         },
         async jwt({ token, user }) {
             if (user) {
-                console.log(user.role)
                 token.id = user.id;
-                token.email = user.email; // ✅ adaugă această linie
+                token.email = user.email;
                 token.role = user.role;
             }
 
-            // Dacă token.role lipsește (ex: la refresh), extrage-l din DB
+            // If token.role is missing (e.g., on refresh), fetch it from DB
             if (!token.role && token.email) {
                 await connectToDatabase();
                 const dbUser = await User.findOne({ email: token.email });
                 if (dbUser) {
                     token.role = dbUser.role;
+                    token.id = dbUser._id.toString();
                 }
             }
 

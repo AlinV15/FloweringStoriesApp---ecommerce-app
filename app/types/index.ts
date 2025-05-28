@@ -1,4 +1,6 @@
-//interfate pentru diferitele tipuri de colectii
+// types/index.ts
+
+// Interfaces for different collection types
 export interface Subcategory {
     _id: string;
     name: string;
@@ -8,15 +10,16 @@ export interface Subcategory {
 }
 
 export interface Review {
-    user: String,
-    product: String,
-    rating: Number,
-    comment: String,
+    user: string;
+    product: string;
+    rating: number;
+    comment: string;
 }
+
 export interface ProductEntry {
     _id: string;
     name: string;
-    description: string;
+    Description?: string; // Note: matches your schema with capital D
     price: number;
     image: string;
     stock: number;
@@ -29,38 +32,43 @@ export interface ProductEntry {
     subcategories: Subcategory[];
     reviews: Review[];
     discount: number;
+    details?: Book | Stationary | Flower; // Added for API response
 }
+
 export interface Book {
-    author: String,
-    pages: Number,
-    isbn: String,
-    publisher: String,
-    genre: String,
-    language: String,
-    publicationDate: Date
-};
+    _id?: string;
+    author: string;
+    pages: number;
+    isbn: string;
+    publisher: string;
+    genre: string;
+    language: string;
+    publicationDate: Date;
+}
 
 export interface Flower {
-    color: String,
-    freshness: Number,
-    lifespan: Number,
-    season: String,
-    careInstructions: String,
-    expiryDate: Date
-};
+    _id?: string;
+    color: string;
+    freshness: number;
+    lifespan: number;
+    season: string;
+    careInstructions: string;
+    expiryDate: Date;
+}
 
 export interface Stationary {
-    brand: String,
-    color: [String],
-    type: String,
-    price: Number,
+    _id?: string;
+    brand: string;
+    color: string[];
+    type: string;
+    price?: number; // Optional since main price is in ProductEntry
     dimensions: {
-        height: Number,
-        width: Number,
-        depth: Number
-    },
-    material: String
-};
+        height: number;
+        width: number;
+        depth: number;
+    };
+    material: string;
+}
 
 export interface User {
     _id: string;

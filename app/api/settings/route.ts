@@ -7,7 +7,7 @@ export async function GET(_: NextRequest) {
     try {
         // Căutăm setările magazinului
         await connectToDatabase()
-        const settings = await ShopSettings.findOne();
+        const settings = await ShopSettings.find();
         if (!settings) {
             return NextResponse.json({ error: 'Shop settings not found' }, { status: 404 });
         }

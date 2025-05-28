@@ -10,7 +10,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     try {
 
         await connectToDatabase();
-        const id = await params.id;
+        const prms = await params;
+        const id = prms.id;
         const product = await Product.findById(id);
         let prodType;
         switch (product.typeRef) {
