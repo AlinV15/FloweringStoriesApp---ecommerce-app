@@ -119,3 +119,67 @@ export interface Order {
     deliveryMethod: string;
     note?: string;
 }
+export interface ShopSettings {
+    _id?: string;
+    shopName: string;
+    description: string;
+    tagline?: string;
+    logo: {
+        favicon?: string;
+        headerLogo?: string;
+        footerLogo?: string;
+    };
+    colors: {
+        primary: string;
+        secondary: string;
+        accent: string;
+    };
+    currency: 'RON' | 'USD' | 'EUR' | 'GBP';
+    timezone: string;
+    paymentMethods: ('stripe' | 'paypal' | 'bank' | 'cod')[];
+    shippingSettings: {
+        freeShippingThreshold: number;
+        defaultShippingCost: number;
+        enableLocalPickup: boolean;
+    };
+    contact?: {
+        email?: string;
+        phone?: string;
+        address?: {
+            street?: string;
+            city?: string;
+            state?: string;
+            postalCode?: string;
+            country: string;
+        };
+    };
+    socialMedia?: {
+        facebook?: string;
+        instagram?: string;
+        twitter?: string;
+        tiktok?: string;
+    };
+    businessHours: {
+        day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+        isOpen: boolean;
+        openTime: string;
+        closeTime: string;
+    }[];
+    features: {
+        enableReviews: boolean;
+        enableWishlist: boolean;
+        enableNewsletter: boolean;
+        enableNotifications: boolean;
+        maintenanceMode: boolean;
+    };
+    seo?: {
+        metaTitle?: string;
+        metaDescription?: string;
+        keywords?: string[];
+        googleAnalytics?: string;
+        facebookPixel?: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+    updatedBy?: string;
+}

@@ -6,6 +6,7 @@ import { orderSchema, orderItemSchema } from "@/lib/validators";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import Address from "@/lib/models/Address";
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -18,9 +19,17 @@ export async function POST(req: NextRequest) {
 
     const itemSchema = z.array(orderItemSchema);
     const itemsValidation = itemSchema.safeParse(items);
-    const orderValidation = orderSchema.omit({ items: true, totalAmount: true }).safeParse(orderData);
+    const orderValidation = orderSchema.safeParse(orderData);
+
+    if (!itemsValidation.success) {
+        console.log("Items validation failed:", itemsValidation.error.issues);
+    }
+    if (!orderValidation.success) {
+        console.log("Order validation failed:", orderValidation.error.issues);
+    }
 
     if (!itemsValidation.success || !orderValidation.success) {
+        console.log("Nepoate ai probleme cu validarea")
         return NextResponse.json({
             error: {
                 items: itemsValidation.error?.flatten?.(),
@@ -30,11 +39,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (!userId && (!body.guestEmail || !body.guestName)) {
+        console.log("Nu sunt buni numele")
         return NextResponse.json({ error: "Trebuie să furnizezi nume și email ca guest." }, { status: 400 });
     }
 
-
     try {
+        // Creează address doar dacă e courier
+        let savedAddress = null;
+        if (body.deliveryMethod === 'courier' && body.address) {
+            savedAddress = await Address.create(body.address);
+        }
+
         // Creează fiecare OrderItem în baza de date
         const createdOrderItems = await Promise.all(
             items.map(async (item: any) => {
@@ -48,23 +63,25 @@ export async function POST(req: NextRequest) {
 
         // Creează comanda
         const order = await Order.create({
-            ...orderValidation.data,
-            user: userId,
+            user: userId || undefined,
             guestEmail: !userId ? body.guestEmail : undefined,
             guestName: !userId ? body.guestName : undefined,
             items: createdOrderItems,
+            address: savedAddress ? savedAddress._id : undefined,
             totalAmount: total,
-            total: total,
+            deliveryMethod: body.deliveryMethod,
+            note: body.note,
             status: "pending",
             payment: {
-                ...orderValidation.data.payment,
                 amount: total,
-                currency: orderValidation.data.payment.currency || "ron",
-                status: "processing"
+                currency: body.payment?.currency || "ron",
+                status: "processing",
+                method: body.payment?.method || 'card'
+                // stripePaymentIntentId va fi adăugat mai târziu
             }
         });
 
-        return NextResponse.json(order, { status: 201 });
+        return NextResponse.json({ order }, { status: 201 });
     } catch (error) {
         console.error("Eroare la creare comandă:", error);
         return NextResponse.json({ message: "Server error", error }, { status: 500 });

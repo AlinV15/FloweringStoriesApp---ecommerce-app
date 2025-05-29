@@ -1,14 +1,23 @@
 import { z } from "zod";
-import { addressSchema } from "./addressSchema";
 
-export const userSchema = z.object({
-    firstName: z.string().min(2),
-    lastName: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(6),
+// lib/validators/userSchema.ts (updated)
+export const userUpdateSchema = z.object({
+    firstName: z.string().min(1).max(50).trim().optional(),
+    lastName: z.string().min(1).max(50).trim().optional(),
     birthDate: z.string().optional(),
     genre: z.enum(["male", "female", "other"]).optional(),
-    address: addressSchema,
-    favoriteProducts: z.array(z.string()).optional(), // ID-uri de produse
-    orders: z.array(z.string()).optional()            // ID-uri de comenzi
+    role: z.enum(["user", "admin"]).optional(),
+    // Don't allow email updates through this route
+});
+
+// Schema for password change (separate route)
+export const passwordChangeSchema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string()
+        .min(8)
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain uppercase, lowercase and numbers"),
+    confirmPassword: z.string()
+}).refine(data => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"]
 });

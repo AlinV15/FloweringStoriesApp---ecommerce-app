@@ -3,31 +3,43 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { ShoppingCart, Menu, X, Divide } from "lucide-react";
+import { ShoppingCart, Menu, X, Plus, Minus, Trash2 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-
+import { useCartStore } from "@/app/stores/CartStore";
+import { CartItem } from "../stores/CartStore";
 
 export default function Header() {
-    const [showCart, setShowCart] = useState(false);
     const [mobileMenu, setMobileMenu] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const cartRef = useRef(null);
 
+    // Zustand cart store
+    const {
+        items,
+        isOpen,
+        toggleCart,
+        closeCart,
+        removeItem,
+        updateQuantity,
+        getTotalItems,
+        getTotalPrice
+    } = useCartStore();
 
-    const toggleCart = () => setShowCart(!showCart);
     const toggleMobileMenu = () => setMobileMenu(!mobileMenu);
-    const closeCart = () => setShowCart(false);
 
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
 
-
+    // Fix hydration mismatch
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Handle clicks outside the cart
     useEffect(() => {
-
         const handleClickOutside = (event: MouseEvent) => {
             if (
-                showCart &&
+                isOpen &&
                 cartRef.current &&
                 !(cartRef.current as HTMLDivElement).contains(event.target as Node)
             ) {
@@ -39,15 +51,14 @@ export default function Header() {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [showCart]);
+    }, [isOpen, closeCart]);
 
-    // Mock cart items
-    const cartItems = [
-        { name: "Red Tulip Bouquet", price: 89.99 },
-        { name: "The Garden Journal", price: 42.5 }
-    ];
+    const handleQuantityChange = (id: string, newQuantity: number) => {
+        updateQuantity(id, newQuantity);
+    };
 
-    const total = cartItems.reduce((acc, item) => acc + item.price, 0);
+    const totalItems = mounted ? getTotalItems() : 0;
+    const totalPrice = mounted ? getTotalPrice() : 0;
 
     return (
         <>
@@ -85,10 +96,7 @@ export default function Header() {
                             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
                         </Link>
                         {isAdmin && (
-                            <Link
-                                href="/admin"
-                                className="relative group py-2 cursor-pointer"
-                            >
+                            <Link href="/admin" className="relative group py-2 cursor-pointer">
                                 <span>Admin</span>
                                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
                             </Link>
@@ -97,20 +105,27 @@ export default function Header() {
 
                     <div className="flex items-center space-x-6">
                         <div className="hidden md:flex items-center space-x-6 text-sm">
-                            {
-                                !session && <div className="hidden md:flex items-center space-x-6 text-sm"><Link href="/login" className="hover:text-pink-600 transition">Sign In</Link>
-                                    <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link></div>
-                            }
-                            {session && <button onClick={() => signOut({ callbackUrl: "/" })} className="hover:text-pink-600 transition cursor-pointer">Sign out</button>}
+                            {!session && (
+                                <div className="hidden md:flex items-center space-x-6 text-sm">
+                                    <Link href="/login" className="hover:text-pink-600 transition">Sign In</Link>
+                                    <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link>
+                                </div>
+                            )}
+                            {session && (
+                                <button onClick={() => signOut({ callbackUrl: "/" })} className="hover:text-pink-600 transition cursor-pointer">
+                                    Sign out
+                                </button>
+                            )}
                         </div>
 
                         <button onClick={toggleCart} className="relative p-2 hover:bg-[#f5e1dd] rounded-full transition">
                             <ShoppingCart className="w-5 h-5" />
-                            {cartItems.length > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                                    {cartItems.length}
-                                </span>
-                            )}
+                            <span
+                                className={`absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full animate-pulse transition-opacity ${mounted && totalItems > 0 ? 'opacity-100' : 'opacity-0'
+                                    }`}
+                            >
+                                {totalItems}
+                            </span>
                         </button>
 
                         <button onClick={toggleMobileMenu} className="md:hidden p-2 hover:bg-[#f5e1dd] rounded-full transition">
@@ -128,8 +143,16 @@ export default function Header() {
                             <Link href="/products/stationaries" className="py-2 hover:text-pink-600 transition">Stationery</Link>
                             <Link href="/products/flowers" className="py-2 hover:text-pink-600 transition">Flowers</Link>
                             <div className="border-t border-[#f0e4e0] pt-4 mt-2 flex justify-between">
-                                <Link href="/login" className="py-2 hover:text-pink-600 transition">Sign In</Link>
-                                <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link>
+                                {!session ? (
+                                    <>
+                                        <Link href="/login" className="py-2 hover:text-pink-600 transition">Sign In</Link>
+                                        <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link>
+                                    </>
+                                ) : (
+                                    <button onClick={() => signOut({ callbackUrl: "/" })} className="py-2 hover:text-pink-600 transition">
+                                        Sign out
+                                    </button>
+                                )}
                             </div>
                         </nav>
                     </div>
@@ -137,53 +160,136 @@ export default function Header() {
             </header>
 
             {/* Cart Overlay and Sidebar */}
-            {showCart && (
+            {isOpen && (
                 <div className="fixed top-0 right-0 w-full max-w-sm bg-white h-full shadow-lg z-[60] text-neutral-500">
                     {/* Backdrop overlay */}
                     <div
-                        className="absolute inset-0 bg-black bg-opacity-20"
+                        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
                         onClick={closeCart}
                     ></div>
 
                     {/* Cart sidebar */}
                     <div
                         ref={cartRef}
-                        className="absolute top-0 right-0 w-full max-w-sm bg-white h-full shadow-lg transform transition-transform duration-300"
+                        className="relative w-full max-w-md bg-white h-full shadow-2xl transform transition-transform duration-300 flex flex-col"
                     >
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0e4e0]">
-                            <h2 className="text-lg font-medium">Your Cart</h2>
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0e4e0] bg-[#fdf8f6]">
+                            <h2 className="text-xl font-semibold text-[#9c6b63]">Shopping Cart</h2>
                             <button onClick={closeCart} className="p-2 hover:bg-[#f5e1dd] rounded-full transition">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-6 h-[calc(100vh-180px)] overflow-y-auto">
-                            {cartItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
+                        {/* Cart Content */}
+                        <div className="flex-1 overflow-y-auto">
+                            {!mounted || items.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center p-6">
                                     <ShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
-                                    <p className="text-gray-500">Your cart is empty.</p>
+                                    <h3 className="text-lg font-medium text-gray-600 mb-2">Your cart is empty</h3>
+                                    <p className="text-gray-500 mb-6">Add some products to get started!</p>
+                                    <Link
+                                        href="/products"
+                                        onClick={closeCart}
+                                        className="px-6 py-3 bg-[#9c6b63] hover:bg-[#875a53] text-white rounded-lg transition"
+                                    >
+                                        Start Shopping
+                                    </Link>
                                 </div>
                             ) : (
-                                <ul className="space-y-4 divide-y divide-[#f0e4e0]">
-                                    {cartItems.map((item, idx) => (
-                                        <li key={idx} className="flex justify-between py-3">
-                                            <span className="font-medium">{item.name}</span>
-                                            <span className="text-[#9c6b63]">{item.price.toFixed(2)} RON</span>
-                                        </li>
+                                <div className="p-4 space-y-4">
+                                    {items.map((item: CartItem) => (
+                                        <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                                            <div className="relative w-16 h-16 flex-shrink-0">
+                                                <Image
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    fill
+                                                    className="object-cover rounded-md"
+                                                />
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                                                <p className="text-sm text-gray-600 capitalize">{item.type}</p>
+
+                                                {/* Price */}
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="font-semibold text-[#9c6b63]">
+                                                        €{(item.discount > 0
+                                                            ? item.price * (1 - item.discount / 100)
+                                                            : item.price
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                    {item.discount > 0 && (
+                                                        <span className="text-sm text-gray-500 line-through">
+                                                            €{item.price.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Quantity Controls */}
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <div className="flex items-center border border-gray-300 rounded-md">
+                                                        <button
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                                            className="p-1 hover:bg-gray-100 transition"
+                                                            disabled={item.quantity <= 1}
+                                                        >
+                                                            <Minus size={14} />
+                                                        </button>
+                                                        <span className="px-3 py-1 text-sm font-medium">{item.quantity}</span>
+                                                        <button
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                                            className="p-1 hover:bg-gray-100 transition"
+                                                            disabled={item.quantity >= item.maxStock}
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => removeItem(item.id)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-md transition"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             )}
                         </div>
 
-                        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#f0e4e0] bg-white">
-                            <div className="flex justify-between font-medium mb-4">
-                                <span>Total:</span>
-                                <span className="text-lg">{total.toFixed(2)} RON</span>
+                        {/* Footer */}
+                        {mounted && items.length > 0 && (
+                            <div className="border-t border-[#f0e4e0] bg-[#fdf8f6] p-6 space-y-4">
+                                {/* Total */}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-lg font-semibold text-gray-900">Total:</span>
+                                    <span className="text-xl font-bold text-[#9c6b63]">€{totalPrice.toFixed(2)}</span>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="space-y-3">
+                                    <Link
+                                        href="/cart"
+                                        onClick={closeCart}
+                                        className="w-full block text-center px-6 py-3 border border-[#9c6b63] text-[#9c6b63] rounded-lg hover:bg-[#9c6b63] hover:text-white transition"
+                                    >
+                                        View Cart
+                                    </Link>
+                                    <Link
+                                        href="/checkout"
+                                        onClick={closeCart}
+                                        className="w-full block text-center px-6 py-3 bg-[#9c6b63] hover:bg-[#875a53] text-white rounded-lg transition"
+                                    >
+                                        Checkout
+                                    </Link>
+                                </div>
                             </div>
-                            <button className="w-full bg-[#9c6b63] hover:bg-[#875a53] text-white py-3 rounded-lg transition">
-                                Checkout
-                            </button>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}
