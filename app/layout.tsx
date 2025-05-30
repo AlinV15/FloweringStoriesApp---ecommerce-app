@@ -1,9 +1,10 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
-import ClientLayout from "./components/ClientLayout"; // actualizează dacă e în altă parte
+import ClientLayout from "./components/ClientLayout";
 import { Playfair_Display, Nunito } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import { MaintenanceWrapper } from "./components/MaintenanceWrapper";
 
 const playfair = Playfair_Display({
   variable: "--font-heading",
@@ -33,8 +34,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${nunito.variable} ${playfair.variable} antialiased bg-[#fdf8f6] text-gray-900`}>
         <ClientLayout>
-          {children}
-          <Toaster position="top-right" reverseOrder={false} />
+          <MaintenanceWrapper>
+            {children}
+            <Toaster position="top-right" reverseOrder={false} />
+          </MaintenanceWrapper>
         </ClientLayout>
       </body>
     </html>

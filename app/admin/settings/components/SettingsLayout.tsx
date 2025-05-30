@@ -1,4 +1,4 @@
-// app/admin/settings/components/SettingsLayout.tsx - Main layout component
+// app/admin/settings/components/SettingsLayout.tsx - MVP Version
 'use client'
 import React, { useState } from 'react';
 import SettingsNavigation from './SettingsNavigation';
@@ -6,8 +6,10 @@ import SettingsManager from './SettingsManager';
 import SettingsHistory from './SettingsHistory';
 import SettingsBackup from './SettingsBackup';
 
+type SettingsTab = 'settings' | 'history' | 'backup';
+
 const SettingsLayout: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'settings' | 'history' | 'backup'>('settings');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('settings');
 
     const renderContent = () => {
         switch (activeTab) {
@@ -25,9 +27,9 @@ const SettingsLayout: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <SettingsNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="py-8">
+            <main>
                 {renderContent()}
-            </div>
+            </main>
         </div>
     );
 };

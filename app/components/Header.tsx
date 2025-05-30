@@ -7,11 +7,17 @@ import { ShoppingCart, Menu, X, Plus, Minus, Trash2 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useCartStore } from "@/app/stores/CartStore";
 import { CartItem } from "../stores/CartStore";
+import { useShopSettings } from "@/contexts/ShopSettingsContext";
+import { useCurrency } from "@/app/hooks/useCurrency";
 
 export default function Header() {
     const [mobileMenu, setMobileMenu] = useState(false);
     const [mounted, setMounted] = useState(false);
     const cartRef = useRef(null);
+
+    // Shop Settings
+    const { settings } = useShopSettings();
+    const { formatPrice } = useCurrency();
 
     // Zustand cart store
     const {
@@ -60,20 +66,26 @@ export default function Header() {
     const totalItems = mounted ? getTotalItems() : 0;
     const totalPrice = mounted ? getTotalPrice() : 0;
 
+    // Get logo and shop name from settings, fallback to defaults
+    const logoSrc = settings?.logo?.headerLogo || "/flowering_stories_logo.png";
+    const shopName = settings?.shopName || "Flowering Stories";
+    const primaryColor = settings?.colors?.primary || "#9c6b63";
+    const accentColor = settings?.colors?.accent || "#f5e1dd";
+
     return (
         <>
             <header className="bg-[#fdf8f6] sticky top-0 z-40 border-b text-neutral-500 border-[#f0e4e0]">
                 <div className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-6 py-4">
                     <Link href="/" className="flex items-center gap-2">
                         <Image
-                            src="/flowering_stories_logo.png"
-                            alt="Flowering Stories"
+                            src={logoSrc}
+                            alt={shopName}
                             width={48}
                             height={48}
                             className="rounded-full shadow-sm"
                         />
                         <span className="text-xl font-light tracking-wide hidden md:block">
-                            <span className="font-semibold">Flowering</span> Stories
+                            <span className="font-semibold">{shopName.split(' ')[0]}</span> {shopName.split(' ').slice(1).join(' ')}
                         </span>
                     </Link>
 
@@ -81,24 +93,39 @@ export default function Header() {
                     <nav className="hidden md:flex space-x-8 text-sm">
                         <Link href="/products" className="relative group py-2">
                             <span>All Products</span>
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
+                            <span
+                                className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
+                                style={{ backgroundColor: primaryColor }}
+                            ></span>
                         </Link>
                         <Link href="/products/books" className="relative group py-2">
                             <span>Books</span>
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
+                            <span
+                                className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
+                                style={{ backgroundColor: primaryColor }}
+                            ></span>
                         </Link>
                         <Link href="/products/stationaries" className="relative group py-2">
                             <span>Stationery</span>
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
+                            <span
+                                className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
+                                style={{ backgroundColor: primaryColor }}
+                            ></span>
                         </Link>
                         <Link href="/products/flowers" className="relative group py-2">
                             <span>Flowers</span>
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
+                            <span
+                                className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
+                                style={{ backgroundColor: primaryColor }}
+                            ></span>
                         </Link>
                         {isAdmin && (
                             <Link href="/admin" className="relative group py-2 cursor-pointer">
                                 <span>Admin</span>
-                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 group-hover:w-full transition-all duration-300"></span>
+                                <span
+                                    className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
+                                    style={{ backgroundColor: primaryColor }}
+                                ></span>
                             </Link>
                         )}
                     </nav>
@@ -107,28 +134,66 @@ export default function Header() {
                         <div className="hidden md:flex items-center space-x-6 text-sm">
                             {!session && (
                                 <div className="hidden md:flex items-center space-x-6 text-sm">
-                                    <Link href="/login" className="hover:text-pink-600 transition">Sign In</Link>
-                                    <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link>
+                                    <Link
+                                        href="/login"
+                                        className="transition"
+                                        style={{ color: `${primaryColor}` }}
+                                        onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '0.8'}
+                                        onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '1'}
+                                    >
+                                        Sign In
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="px-4 py-2 rounded-full transition"
+                                        style={{
+                                            backgroundColor: accentColor,
+                                            color: primaryColor
+                                        }}
+                                        onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '0.9'}
+                                        onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '1'}
+                                    >
+                                        Register
+                                    </Link>
                                 </div>
                             )}
                             {session && (
-                                <button onClick={() => signOut({ callbackUrl: "/" })} className="hover:text-pink-600 transition cursor-pointer">
+                                <button
+                                    onClick={() => signOut({ callbackUrl: "/" })}
+                                    className="transition cursor-pointer"
+                                    style={{ color: primaryColor }}
+                                    onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '0.8'}
+                                    onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '1'}
+                                >
                                     Sign out
                                 </button>
                             )}
                         </div>
 
-                        <button onClick={toggleCart} className="relative p-2 hover:bg-[#f5e1dd] rounded-full transition">
+                        <button
+                            onClick={toggleCart}
+                            className="relative p-2 rounded-full transition"
+                            style={{ backgroundColor: 'transparent' }}
+                            onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = accentColor}
+                            onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                        >
                             <ShoppingCart className="w-5 h-5" />
                             <span
-                                className={`absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full animate-pulse transition-opacity ${mounted && totalItems > 0 ? 'opacity-100' : 'opacity-0'
+                                className={`absolute -top-1 -right-1 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full animate-pulse transition-opacity ${mounted && totalItems > 0 ? 'opacity-100' : 'opacity-0'
                                     }`}
+                                style={{ backgroundColor: primaryColor }}
                             >
                                 {totalItems}
                             </span>
                         </button>
 
-                        <button onClick={toggleMobileMenu} className="md:hidden p-2 hover:bg-[#f5e1dd] rounded-full transition">
+                        <button
+                            onClick={toggleMobileMenu}
+                            className="md:hidden p-2 rounded-full transition"
+                            style={{ backgroundColor: 'transparent' }}
+                            onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = accentColor}
+                            onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                        >
                             <Menu className="w-5 h-5" />
                         </button>
                     </div>
@@ -138,18 +203,78 @@ export default function Header() {
                 {mobileMenu && (
                     <div className="md:hidden bg-white border-t border-[#f0e4e0] py-4 px-6 shadow-md">
                         <nav className="flex flex-col space-y-4">
-                            <Link href="/products" className="py-2 hover:text-pink-600 transition">All Products</Link>
-                            <Link href="/products/books" className="py-2 hover:text-pink-600 transition">Books</Link>
-                            <Link href="/products/stationaries" className="py-2 hover:text-pink-600 transition">Stationery</Link>
-                            <Link href="/products/flowers" className="py-2 hover:text-pink-600 transition">Flowers</Link>
+                            <Link
+                                href="/products"
+                                className="py-2 transition"
+                                style={{ color: 'inherit' }}
+                                onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                            >
+                                All Products
+                            </Link>
+                            <Link
+                                href="/products/books"
+                                className="py-2 transition"
+                                onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                            >
+                                Books
+                            </Link>
+                            <Link
+                                href="/products/stationaries"
+                                className="py-2 transition"
+                                onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                            >
+                                Stationery
+                            </Link>
+                            <Link
+                                href="/products/flowers"
+                                className="py-2 transition"
+                                onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                            >
+                                Flowers
+                            </Link>
+                            {isAdmin && (
+                                <Link
+                                    href="/admin"
+                                    className="py-2 transition"
+                                    onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                    onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                                >
+                                    Admin
+                                </Link>
+                            )}
                             <div className="border-t border-[#f0e4e0] pt-4 mt-2 flex justify-between">
                                 {!session ? (
                                     <>
-                                        <Link href="/login" className="py-2 hover:text-pink-600 transition">Sign In</Link>
-                                        <Link href="/register" className="px-4 py-2 bg-[#f5e1dd] hover:bg-[#f0d1cc] text-[#9c6b63] rounded-full transition">Register</Link>
+                                        <Link
+                                            href="/login"
+                                            className="py-2 transition"
+                                            onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                            onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                                        >
+                                            Sign In
+                                        </Link>
+                                        <Link
+                                            href="/register"
+                                            className="px-4 py-2 rounded-full transition"
+                                            style={{
+                                                backgroundColor: accentColor,
+                                                color: primaryColor
+                                            }}
+                                        >
+                                            Register
+                                        </Link>
                                     </>
                                 ) : (
-                                    <button onClick={() => signOut({ callbackUrl: "/" })} className="py-2 hover:text-pink-600 transition">
+                                    <button
+                                        onClick={() => signOut({ callbackUrl: "/" })}
+                                        className="py-2 transition"
+                                        onMouseEnter={(e) => (e.target as HTMLElement).style.color = primaryColor}
+                                        onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'inherit'}
+                                    >
                                         Sign out
                                     </button>
                                 )}
@@ -174,9 +299,22 @@ export default function Header() {
                         className="relative w-full max-w-md bg-white h-full shadow-2xl transform transition-transform duration-300 flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0e4e0] bg-[#fdf8f6]">
-                            <h2 className="text-xl font-semibold text-[#9c6b63]">Shopping Cart</h2>
-                            <button onClick={closeCart} className="p-2 hover:bg-[#f5e1dd] rounded-full transition">
+                        <div
+                            className="flex items-center justify-between px-6 py-4 border-b border-[#f0e4e0]"
+                            style={{ backgroundColor: settings?.colors?.accent || '#fdf8f6' }}
+                        >
+                            <h2
+                                className="text-xl font-semibold"
+                                style={{ color: primaryColor }}
+                            >
+                                Shopping Cart
+                            </h2>
+                            <button
+                                onClick={closeCart}
+                                className="p-2 rounded-full transition"
+                                onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = accentColor}
+                                onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -191,7 +329,10 @@ export default function Header() {
                                     <Link
                                         href="/products"
                                         onClick={closeCart}
-                                        className="px-6 py-3 bg-[#9c6b63] hover:bg-[#875a53] text-white rounded-lg transition"
+                                        className="px-6 py-3 text-white rounded-lg transition"
+                                        style={{ backgroundColor: primaryColor }}
+                                        onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '0.9'}
+                                        onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '1'}
                                     >
                                         Start Shopping
                                     </Link>
@@ -215,15 +356,18 @@ export default function Header() {
 
                                                 {/* Price */}
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className="font-semibold text-[#9c6b63]">
-                                                        €{(item.discount > 0
+                                                    <span
+                                                        className="font-semibold"
+                                                        style={{ color: primaryColor }}
+                                                    >
+                                                        {formatPrice(item.discount > 0
                                                             ? item.price * (1 - item.discount / 100)
                                                             : item.price
-                                                        ).toFixed(2)}
+                                                        )}
                                                     </span>
                                                     {item.discount > 0 && (
                                                         <span className="text-sm text-gray-500 line-through">
-                                                            €{item.price.toFixed(2)}
+                                                            {formatPrice(item.price)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -264,11 +408,19 @@ export default function Header() {
 
                         {/* Footer */}
                         {mounted && items.length > 0 && (
-                            <div className="border-t border-[#f0e4e0] bg-[#fdf8f6] p-6 space-y-4">
+                            <div
+                                className="border-t border-[#f0e4e0] p-6 space-y-4"
+                                style={{ backgroundColor: settings?.colors?.accent || '#fdf8f6' }}
+                            >
                                 {/* Total */}
                                 <div className="flex justify-between items-center">
                                     <span className="text-lg font-semibold text-gray-900">Total:</span>
-                                    <span className="text-xl font-bold text-[#9c6b63]">€{totalPrice.toFixed(2)}</span>
+                                    <span
+                                        className="text-xl font-bold"
+                                        style={{ color: primaryColor }}
+                                    >
+                                        {formatPrice(totalPrice)}
+                                    </span>
                                 </div>
 
                                 {/* Actions */}
@@ -276,14 +428,29 @@ export default function Header() {
                                     <Link
                                         href="/cart"
                                         onClick={closeCart}
-                                        className="w-full block text-center px-6 py-3 border border-[#9c6b63] text-[#9c6b63] rounded-lg hover:bg-[#9c6b63] hover:text-white transition"
+                                        className="w-full block text-center px-6 py-3 border rounded-lg transition"
+                                        style={{
+                                            borderColor: primaryColor,
+                                            color: primaryColor
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            (e.target as HTMLElement).style.backgroundColor = primaryColor;
+                                            (e.target as HTMLElement).style.color = 'white';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                                            (e.target as HTMLElement).style.color = primaryColor;
+                                        }}
                                     >
                                         View Cart
                                     </Link>
                                     <Link
                                         href="/checkout"
                                         onClick={closeCart}
-                                        className="w-full block text-center px-6 py-3 bg-[#9c6b63] hover:bg-[#875a53] text-white rounded-lg transition"
+                                        className="w-full block text-center px-6 py-3 text-white rounded-lg transition"
+                                        style={{ backgroundColor: primaryColor }}
+                                        onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '0.9'}
+                                        onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '1'}
                                     >
                                         Checkout
                                     </Link>

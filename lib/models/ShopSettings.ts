@@ -80,7 +80,7 @@ const shopSettingsSchema = new mongoose.Schema({
         closeTime: String, // "18:00"
     }],
 
-    // Features
+    // Features 
     features: {
         enableReviews: { type: Boolean, default: true },
         enableWishlist: { type: Boolean, default: true },

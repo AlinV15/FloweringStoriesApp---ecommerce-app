@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy } from 'react';
 import Image from 'next/image';
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
@@ -31,82 +31,52 @@ import {
     Ruler,
     Hammer
 } from 'lucide-react';
-import { useCartStore } from '../stores/CartStore';
 
-// Updated types to match your actual API response structure
-interface Product {
-    _id: string;
-    name: string;
-    price: number;
-    type: "book" | "stationary" | "flower";
-    subcategories?: Array<{
-        _id: string;
-        name: string;
-        description: string;
-        image: string;
-        type: string;
-    }>;
-    image: string;
-    typeRef: 'Book' | 'Stationary' | 'Flower';
-    refId: string;
-    stock: number;
-    discount: number;
-    Description?: string;
-    details: BookDetails | StationaryDetails | FlowerDetails;
-    reviews?: Review[];
-    averageRating: number | 0;
-    createdAt: string;
-    updatedAt: string;
-}
+// Import tipurile unificate și convertorul
+import {
+    Product,
+    BookProduct,
+    StationaryProduct,
+    FlowerProduct,
+    BookDetails,
+    StationaryDetails,
+    FlowerDetails,
+    Review,
+    convertProductEntryToProduct,
+    isBookProduct,
+    isStationaryProduct,
+    isFlowerProduct
+} from '@/app/types/product';
 
-interface Review {
-    _id: string;
-    userId: string;
-    userName: string;
-    rating: number;
-    comment: string;
-    createdAt: string;
-}
-
-interface BookDetails {
-    author: string;
-    pages: number;
-    isbn: string;
-    publisher: string;
-    genre: string;
-    language: string;
-    publicationDate: Date;
-}
-
-interface StationaryDetails {
-    brand: string;
-    color: string[];
-    type: string;
-    dimensions: {
-        height: number;
-        width: number;
-        depth: number;
-    };
-    material: string;
-}
-
-interface FlowerDetails {
-    color: string;
-    freshness: number;
-    lifespan: number;
-    season: string;
-    careInstructions: string;
-    expiryDate: Date;
-}
+// Import tipurile din API
+import { Product as APIProductEntry } from '@/app/types/product';
+import { useProductStore } from '../stores/ProductStore';
+import { useInView } from 'react-intersection-observer';
 
 interface APIResponse {
-    products: Product[];
+    products: APIProductEntry[];
 }
 
+// Lazy load simple ProductCard that works with ProductEntry directly
+const ProductCard = lazy(() => import("@/app/components/ProductCard"));
+
+// Loading fallbacks
+const ProductCardSkeleton = () => (
+    <div className="group rounded-2xl overflow-hidden bg-white/95 backdrop-blur-sm shadow-lg border border-[#c1a5a2]/20 animate-pulse">
+        <div className="aspect-[3/4] bg-gray-200"></div>
+        <div className="p-5">
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded mb-3 w-3/4"></div>
+            <div className="h-6 bg-gray-200 rounded mb-3 w-1/2"></div>
+            <div className="flex justify-between items-center">
+                <div className="h-6 bg-gray-200 rounded w-16"></div>
+                <div className="h-8 bg-gray-200 rounded w-20"></div>
+            </div>
+        </div>
+    </div>
+);
+
 export default function ProductsPage() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     // Filter states
     const [search, setSearch] = useState('');
@@ -141,72 +111,22 @@ export default function ProductsPage() {
     // Pagination and UI
     const [currentPage, setCurrentPage] = useState(1);
     const [showFilters, setShowFilters] = useState(false);
-    const [cart, setCart] = useState<{ [key: string]: number }>({});
     const itemsPerPage = 12;
 
-    // Fetch products from API
+    // Product store
+    const fetchProducts = useProductStore((state) => state.fetchProducts);
+    const loading = useProductStore((state) => state.loading);
+    const error = useProductStore((state) => state.error);
+    const products = useProductStore((state) => state.products);
+
+    const [featuredRef, featuredInView] = useInView({ threshold: 0.1, triggerOnce: true });
+    const [featuresRef, featuresInView] = useInView({ threshold: 0.1, triggerOnce: true });
+
     useEffect(() => {
-        async function fetchProducts() {
-            try {
-                setLoading(true);
-                const response = await fetch('/api/product');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data: APIResponse = await response.json();
-
-                const productsWithReviews = (data.products || []).map(product => {
-                    const reviews = product.reviews || [];
-                    const averageRating = reviews.length > 0
-                        ? reviews.reduce((acc: number, review: Review) => acc + review.rating, 0) / reviews.length
-                        : 0;
-
-                    return {
-                        ...product,
-                        reviews,
-                        averageRating
-                    };
-                });
-
-                const validProducts = productsWithReviews.filter(product =>
-                    product &&
-                    typeof product === 'object' &&
-                    product._id &&
-                    product.name &&
-                    typeof product.price === 'number'
-                );
-
-                setProducts(validProducts);
-            } catch (err) {
-                console.error('Fetch error:', err);
-                setError(err instanceof Error ? err.message : 'Failed to fetch products');
-            } finally {
-                setLoading(false);
-            }
+        if (featuredInView && !loading) {
+            fetchProducts();
         }
-
-        fetchProducts();
-    }, []);
-
-    // Add to cart functionality
-    const addItem = useCartStore(state => state.addItem);
-
-    // Funcția pentru a adăuga în coș
-    const handleAddToCart = (product: Product) => {
-        addItem({
-            id: product._id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            type: product.type,
-            stock: product.stock,
-            discount: product.discount,
-            maxStock: product.stock
-        });
-
-        // Optionally, show a toast or notification here if needed, but addItem does not return a result.
-    };
+    }, [featuredInView, fetchProducts, loading]);
 
     // Clear category-specific filters when category changes
     useEffect(() => {
@@ -227,88 +147,76 @@ export default function ProductsPage() {
         setCurrentPage(1);
     }, [categoryFilter]);
 
-    // Get unique values for filters
-    const getUniqueSubcategories = () => {
-        const subcats = products.flatMap(p => p.subcategories || []);
-        return [...new Set(subcats.map(sub => sub.name))].filter(Boolean);
-    };
+    // Get unique values for filters usando type guards
+    // const getUniqueGenres = () => {
+    //     const books = products.filter(isBookProduct);
+    //     return [...new Set(books.map(book => book.details?.genre).filter(Boolean))];
+    // };
 
-    // Book filters
-    const getUniqueGenres = () => {
-        const books = products.filter(p => p.typeRef === 'Book');
-        return [...new Set(books.map(book => (book.details as BookDetails).genre).filter(Boolean))];
-    };
+    // const getUniqueAuthors = () => {
+    //     const books = products.filter(isBookProduct);
+    //     return [...new Set(books.map(book => book.details.author).filter(Boolean))];
+    // };
 
-    const getUniqueAuthors = () => {
-        const books = products.filter(p => p.typeRef === 'Book');
-        return [...new Set(books.map(book => (book.details as BookDetails).author).filter(Boolean))];
-    };
+    // const getUniqueLanguages = () => {
+    //     const books = products.filter(isBookProduct);
+    //     return [...new Set(books.map(book => book.details.language).filter(Boolean))];
+    // };
 
-    const getUniqueLanguages = () => {
-        const books = products.filter(p => p.typeRef === 'Book');
-        return [...new Set(books.map(book => (book.details as BookDetails).language).filter(Boolean))];
-    };
+    // const getUniquePublishers = () => {
+    //     const books = products.filter(isBookProduct);
+    //     return [...new Set(books.map(book => book.details.publisher).filter(Boolean))];
+    // };
 
-    const getUniquePublishers = () => {
-        const books = products.filter(p => p.typeRef === 'Book');
-        return [...new Set(books.map(book => (book.details as BookDetails).publisher).filter(Boolean))];
-    };
+    // // Stationary filters
+    // const getUniqueBrands = () => {
+    //     const stationaries = products.filter(isStationaryProduct);
+    //     return [...new Set(stationaries.map(item => item.details.brand).filter(Boolean))];
+    // };
 
-    // Stationary filters
-    const getUniqueBrands = () => {
-        const stationaries = products.filter(p => p.typeRef === 'Stationary');
-        return [...new Set(stationaries.map(item => (item.details as StationaryDetails).brand).filter(Boolean))];
-    };
+    // const getUniqueColors = () => {
+    //     const stationaries = products.filter(isStationaryProduct);
+    //     const allColors = stationaries.flatMap(item => item.details.color || []);
+    //     return [...new Set(allColors)].filter(Boolean);
+    // };
 
-    const getUniqueColors = () => {
-        const stationaries = products.filter(p => p.typeRef === 'Stationary');
-        const allColors = stationaries.flatMap(item => (item.details as StationaryDetails).color || []);
-        return [...new Set(allColors)].filter(Boolean);
-    };
+    // const getUniqueMaterials = () => {
+    //     const stationaries = products.filter(isStationaryProduct);
+    //     return [...new Set(stationaries.map(item => item.details.material).filter(Boolean))];
+    // };
 
-    const getUniqueMaterials = () => {
-        const stationaries = products.filter(p => p.typeRef === 'Stationary');
-        return [...new Set(stationaries.map(item => (item.details as StationaryDetails).material).filter(Boolean))];
-    };
+    // const getUniqueStationaryTypes = () => {
+    //     const stationaries = products.filter(isStationaryProduct);
+    //     return [...new Set(stationaries.map(item => item.details.type).filter(Boolean))];
+    // };
 
-    const getUniqueStationaryTypes = () => {
-        const stationaries = products.filter(p => p.typeRef === 'Stationary');
-        return [...new Set(stationaries.map(item => (item.details as StationaryDetails).type).filter(Boolean))];
-    };
+    // // Flower filters
+    // const getUniqueFlowerColors = () => {
+    //     const flowers = products.filter(isFlowerProduct);
+    //     return [...new Set(flowers.map(flower => flower.details.color).filter(Boolean))];
+    // };
 
-    // Flower filters
-    const getUniqueFlowerColors = () => {
-        const flowers = products.filter(p => p.typeRef === 'Flower');
-        return [...new Set(flowers.map(flower => (flower.details as FlowerDetails).color).filter(Boolean))];
-    };
+    // const getUniqueSeasons = () => {
+    //     const flowers = products.filter(isFlowerProduct);
+    //     return [...new Set(flowers.map(flower => flower.details.season).filter(Boolean))];
+    // };
 
-    const getUniqueSeasons = () => {
-        const flowers = products.filter(p => p.typeRef === 'Flower');
-        return [...new Set(flowers.map(flower => (flower.details as FlowerDetails).season).filter(Boolean))];
-    };
-
-    // Filter products
+    // Filter products usando type guards
     const filteredProducts = products.filter(product => {
         try {
             const matchesCategory = categoryFilter === 'all' || product.type === categoryFilter;
 
             const matchesSearch = product.name?.toLowerCase().includes(search.toLowerCase()) ||
-                (product.typeRef === 'Book' &&
-                    (product.details as BookDetails).author?.toLowerCase().includes(search.toLowerCase())) ||
-                (product.typeRef === 'Stationary' &&
-                    (product.details as StationaryDetails).brand?.toLowerCase().includes(search.toLowerCase())) ||
-                (product.typeRef === 'Flower' &&
-                    (product.details as FlowerDetails).color?.toLowerCase().includes(search.toLowerCase()));
-
-            const matchesSubcategory = subcategoryFilter === 'all' ||
-                (product.subcategories && product.subcategories.some(sub => sub.name === subcategoryFilter));
+                (isBookProduct(product) && product.details.author?.toLowerCase().includes(search.toLowerCase())) ||
+                (isStationaryProduct(product) && product.details.brand?.toLowerCase().includes(search.toLowerCase())) ||
+                (isFlowerProduct(product) && product.details.color?.toLowerCase().includes(search.toLowerCase()));
 
             const minPrice = priceRange.min ? Math.max(0, parseFloat(priceRange.min)) : 0;
             const maxPrice = priceRange.max ? Math.max(0, parseFloat(priceRange.max)) : Infinity;
             const productPrice = typeof product.price === 'number' ? product.price : 0;
             const matchesPrice = productPrice >= minPrice && productPrice <= maxPrice;
 
-            const matchesRating = ratingFilter === 0 || (product.averageRating || 0) >= ratingFilter;
+            //const matchesRating = ratingFilter === 0 || (product.averageRating || 0) >= ratingFilter;
 
             const matchesStock = stockFilter === 'all' ||
                 (stockFilter === 'in-stock' && product.stock > 0) ||
@@ -318,19 +226,18 @@ export default function ProductsPage() {
 
             // Book specific filters
             let matchesBookFilters = true;
-            if (product.typeRef === 'Book') {
-                const bookDetails = product.details as BookDetails;
-                const matchesGenre = genreFilter === 'all' || bookDetails.genre === genreFilter;
-                const matchesAuthor = !authorFilter || bookDetails.author?.toLowerCase().includes(authorFilter.toLowerCase());
-                const matchesLanguage = languageFilter === 'all' || bookDetails.language === languageFilter;
-                const matchesPublisher = publisherFilter === 'all' || bookDetails.publisher === publisherFilter;
+            if (isBookProduct(product)) {
+                const matchesGenre = genreFilter === 'all' || product.details.genre === genreFilter;
+                const matchesAuthor = !authorFilter || product.details.author?.toLowerCase().includes(authorFilter.toLowerCase());
+                const matchesLanguage = languageFilter === 'all' || product.details.language === languageFilter;
+                const matchesPublisher = publisherFilter === 'all' || product.details.publisher === publisherFilter;
 
-                const bookYear = new Date(bookDetails.publicationDate).getFullYear();
+                const bookYear = new Date(product.details.publicationDate).getFullYear();
                 const matchesYear = (!yearFilter.from || bookYear >= parseInt(yearFilter.from)) &&
                     (!yearFilter.to || bookYear <= parseInt(yearFilter.to));
 
-                const matchesPages = (!pagesFilter.min || bookDetails.pages >= parseInt(pagesFilter.min)) &&
-                    (!pagesFilter.max || bookDetails.pages <= parseInt(pagesFilter.max));
+                const matchesPages = (!pagesFilter.min || product.details.pages >= parseInt(pagesFilter.min)) &&
+                    (!pagesFilter.max || product.details.pages <= parseInt(pagesFilter.max));
 
                 matchesBookFilters = matchesGenre && matchesAuthor && matchesLanguage &&
                     matchesPublisher && matchesYear && matchesPages;
@@ -338,34 +245,32 @@ export default function ProductsPage() {
 
             // Stationary specific filters
             let matchesStationaryFilters = true;
-            if (product.typeRef === 'Stationary') {
-                const stationaryDetails = product.details as StationaryDetails;
-                const matchesBrand = brandFilter === 'all' || stationaryDetails.brand === brandFilter;
-                const matchesColor = colorFilter === 'all' || (stationaryDetails.color && stationaryDetails.color.includes(colorFilter));
-                const matchesMaterial = materialFilter === 'all' || stationaryDetails.material === materialFilter;
-                const matchesStType = stationaryTypeFilter === 'all' || stationaryDetails.type === stationaryTypeFilter;
+            if (isStationaryProduct(product)) {
+                const matchesBrand = brandFilter === 'all' || product.details.brand === brandFilter;
+                const matchesColor = colorFilter === 'all' || (product.details.color && product.details.color.includes(colorFilter));
+                const matchesMaterial = materialFilter === 'all' || product.details.material === materialFilter;
+                const matchesStType = stationaryTypeFilter === 'all' || product.details.type === stationaryTypeFilter;
 
                 matchesStationaryFilters = matchesBrand && matchesColor && matchesMaterial && matchesStType;
             }
 
             // Flower specific filters
             let matchesFlowerFilters = true;
-            if (product.typeRef === 'Flower') {
-                const flowerDetails = product.details as FlowerDetails;
-                const matchesFlowerColor = flowerColorFilter === 'all' || flowerDetails.color === flowerColorFilter;
-                const matchesSeason = seasonFilter === 'all' || flowerDetails.season === seasonFilter;
+            if (isFlowerProduct(product)) {
+                const matchesFlowerColor = flowerColorFilter === 'all' || product.details.color === flowerColorFilter;
+                const matchesSeason = seasonFilter === 'all' || product.details.season === seasonFilter;
 
-                const matchesFreshness = (!freshnessFilter.min || flowerDetails.freshness >= parseInt(freshnessFilter.min)) &&
-                    (!freshnessFilter.max || flowerDetails.freshness <= parseInt(freshnessFilter.max));
+                const matchesFreshness = (!freshnessFilter.min || product.details.freshness >= parseInt(freshnessFilter.min)) &&
+                    (!freshnessFilter.max || product.details.freshness <= parseInt(freshnessFilter.max));
 
-                const matchesLifespan = (!lifespanFilter.min || flowerDetails.lifespan >= parseInt(lifespanFilter.min)) &&
-                    (!lifespanFilter.max || flowerDetails.lifespan <= parseInt(lifespanFilter.max));
+                const matchesLifespan = (!lifespanFilter.min || product.details.lifespan >= parseInt(lifespanFilter.min)) &&
+                    (!lifespanFilter.max || product.details.lifespan <= parseInt(lifespanFilter.max));
 
                 matchesFlowerFilters = matchesFlowerColor && matchesSeason && matchesFreshness && matchesLifespan;
             }
 
-            return matchesCategory && matchesSearch && matchesSubcategory && matchesPrice &&
-                matchesRating && matchesStock && matchesDiscount && matchesBookFilters &&
+            return matchesCategory && matchesSearch && matchesPrice &&
+                //matchesRating && matchesStock && matchesDiscount && matchesBookFilters &&
                 matchesStationaryFilters && matchesFlowerFilters;
         } catch (err) {
             console.error('Error filtering product:', product, err);
@@ -380,8 +285,8 @@ export default function ProductsPage() {
                 return a.price - b.price;
             case 'price-high':
                 return b.price - a.price;
-            case 'rating':
-                return (b.averageRating || 0) - (a.averageRating || 0);
+            case 'rating': return a.price
+            // return (b.averageRating || 0) - (a.averageRating || 0);
             case 'newest':
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             case 'name':
@@ -396,26 +301,6 @@ export default function ProductsPage() {
     );
 
     const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
-
-    // Star rating component
-    const StarRating = ({ rating }: { rating: number }) => {
-        const stars = [];
-        const fullStars = Math.floor(rating);
-
-        for (let i = 0; i < 5; i++) {
-            if (i < fullStars) {
-                stars.push(
-                    <Star key={i} className="text-yellow-400" fill="currentColor" size={16} />
-                );
-            } else {
-                stars.push(
-                    <Star key={i} className="text-gray-300" size={16} />
-                );
-            }
-        }
-
-        return <div className="flex gap-1">{stars}</div>;
-    };
 
     // Clear all filters
     const clearAllFilters = () => {
@@ -534,7 +419,7 @@ export default function ProductsPage() {
                                 </select>
                             </div>
 
-                            {/* Category Filter - Button Style */}
+                            {/* Category Filter */}
                             <div className="mb-6">
                                 <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
                                     <Package size={16} />
@@ -565,192 +450,9 @@ export default function ProductsPage() {
                                 </div>
                             </div>
 
-                            {/* Subcategory Filter */}
-                            <div className="mb-6">
-                                <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                    <Tag size={16} />
-                                    Subcategory
-                                </h3>
-                                <select
-                                    value={subcategoryFilter}
-                                    onChange={(e) => setSubcategoryFilter(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                >
-                                    <option value="all">All Subcategories</option>
-                                    {getUniqueSubcategories().map(subcategory => (
-                                        <option key={subcategory} value={subcategory}>{subcategory}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Conditional Filters Based on Category */}
                             {/* Book Specific Filters */}
                             {(categoryFilter === 'all' || categoryFilter === 'book') && (
                                 <>
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <BookOpen size={16} />
-                                            Genre
-                                        </h3>
-                                        <select
-                                            value={genreFilter}
-                                            onChange={(e) => setGenreFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Genres</option>
-                                            {getUniqueGenres().map(genre => (
-                                                <option key={genre} value={genre}>{genre}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <User size={16} />
-                                            Author
-                                        </h3>
-                                        <input
-                                            type="text"
-                                            placeholder="Search by author..."
-                                            value={authorFilter}
-                                            onChange={(e) => setAuthorFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Languages size={16} />
-                                            Language
-                                        </h3>
-                                        <select
-                                            value={languageFilter}
-                                            onChange={(e) => setLanguageFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Languages</option>
-                                            {getUniqueLanguages().map(language => (
-                                                <option key={language} value={language}>{language}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Building size={16} />
-                                            Publisher
-                                        </h3>
-                                        <select
-                                            value={publisherFilter}
-                                            onChange={(e) => setPublisherFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Publishers</option>
-                                            {getUniquePublishers().map(publisher => (
-                                                <option key={publisher} value={publisher}>{publisher}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Calendar size={16} />
-                                            Publication Year
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input
-                                                type="number"
-                                                placeholder="From"
-                                                value={yearFilter.from}
-                                                onChange={(e) => setYearFilter(prev => ({ ...prev, from: e.target.value }))}
-                                                className="px-3 py-2 text-sm border border-[#c1a5a2]/30 rounded-lg focus:border-[#9a6a63] text-neutral-700"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="To"
-                                                value={yearFilter.to}
-                                                onChange={(e) => setYearFilter(prev => ({ ...prev, to: e.target.value }))}
-                                                className="px-3 py-2 text-sm border border-[#c1a5a2]/30 rounded-lg focus:border-[#9a6a63] text-neutral-700"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3">Number of Pages</h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input
-                                                type="number"
-                                                placeholder="Min"
-                                                value={pagesFilter.min}
-                                                onChange={(e) => setPagesFilter(prev => ({ ...prev, min: e.target.value }))}
-                                                className="px-3 py-2 text-sm border border-[#c1a5a2]/30 rounded-lg focus:border-[#9a6a63] text-neutral-700"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Max"
-                                                value={pagesFilter.max}
-                                                onChange={(e) => setPagesFilter(prev => ({ ...prev, max: e.target.value }))}
-                                                className="px-3 py-2 text-sm border border-[#c1a5a2]/30 rounded-lg focus:border-[#9a6a63] text-neutral-700"
-                                            />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* Stationary Specific Filters */}
-                            {(categoryFilter === 'all' || categoryFilter === 'stationary') && (
-                                <>
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Building size={16} />
-                                            Brand
-                                        </h3>
-                                        <select
-                                            value={brandFilter}
-                                            onChange={(e) => setBrandFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Brands</option>
-                                            {getUniqueBrands().map(brand => (
-                                                <option key={brand} value={brand}>{brand}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Palette size={16} />
-                                            Color
-                                        </h3>
-                                        <select
-                                            value={colorFilter}
-                                            onChange={(e) => setColorFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Colors</option>
-                                            {getUniqueColors().map(color => (
-                                                <option key={color} value={color}>{color}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
-                                            <Box size={16} />
-                                            Material
-                                        </h3>
-                                        <select
-                                            value={materialFilter}
-                                            onChange={(e) => setMaterialFilter(e.target.value)}
-                                            className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
-                                        >
-                                            <option value="all">All Materials</option>
-                                            {getUniqueMaterials().map(material => (
-                                                <option key={material} value={material}>{material}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
                                     <div className="mb-6">
                                         <h3 className="font-semibold text-[#9a6a63] mb-3 flex items-center gap-2">
                                             <Pencil size={16} />
@@ -762,9 +464,9 @@ export default function ProductsPage() {
                                             className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
                                         >
                                             <option value="all">All Types</option>
-                                            {getUniqueStationaryTypes().map(type => (
+                                            {/* {getUniqueStationaryTypes().map(type => (
                                                 <option key={type} value={type}>{type}</option>
-                                            ))}
+                                            ))} */}
                                         </select>
                                     </div>
                                 </>
@@ -784,9 +486,9 @@ export default function ProductsPage() {
                                             className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
                                         >
                                             <option value="all">All Colors</option>
-                                            {getUniqueFlowerColors().map(color => (
+                                            {/* {getUniqueFlowerColors().map(color => (
                                                 <option key={color} value={color}>{color}</option>
-                                            ))}
+                                            ))} */}
                                         </select>
                                     </div>
 
@@ -801,9 +503,9 @@ export default function ProductsPage() {
                                             className="w-full px-4 py-3 rounded-xl border border-[#c1a5a2]/30 focus:border-[#9a6a63] focus:ring-2 focus:ring-[#9a6a63]/20 bg-white text-neutral-700"
                                         >
                                             <option value="all">All Seasons</option>
-                                            {getUniqueSeasons().map(season => (
+                                            {/* {getUniqueSeasons().map(season => (
                                                 <option key={season} value={season}>{season}</option>
-                                            ))}
+                                            ))} */}
                                         </select>
                                     </div>
 
@@ -973,7 +675,7 @@ export default function ProductsPage() {
                             </div>
                         </div>
 
-                        {/* Products Grid */}
+                        {/* Products Grid cu ProductCard unificat */}
                         {paginatedProducts.length === 0 ? (
                             <div className="text-center py-12 bg-white/90 backdrop-blur-sm rounded-2xl border border-[#c1a5a2]/20 shadow-xl">
                                 <Package className="w-16 h-16 mx-auto mb-4 text-[#9a6a63]/60" />
@@ -989,111 +691,14 @@ export default function ProductsPage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {paginatedProducts.map((product) => (
-                                    <div
-                                        key={product._id}
-                                        className="group rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-500 border border-[#c1a5a2]/20 hover:border-[#9a6a63]/30 transform hover:-translate-y-2"
-                                    >
-                                        <div className="relative aspect-square overflow-hidden">
-                                            <Image
-                                                src={product.image || '/api/placeholder/300/250'}
-                                                alt={product.name || 'Product'}
-                                                fill
-                                                className="object-cover group-hover:scale-110 transition-transform duration-500"
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.src = '/placeholder-product.jpg';
-                                                }}
-                                            />
-                                            {/* Category Icon */}
-                                            <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold border border-[#c1a5a2]/30">
-                                                {product.typeRef === 'Book' ? (
-                                                    <Book className='text-sky-900 bg-blue-300 h-7 w-7 p-1 rounded-xl' />
-                                                ) : product.typeRef === 'Stationary' ? (
-                                                    <Pencil className='text-green-900 bg-emerald-300 h-7 w-7 p-1 rounded-xl' />
-                                                ) : (
-                                                    <Flower className='text-pink-900 bg-red-300 h-7 w-7 p-1 rounded-xl' />
-                                                )}
-                                            </div>
-                                            {/* Discount Badge */}
-                                            {product.discount > 0 && (
-                                                <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                                                    -{product.discount}%
-                                                </div>
-                                            )}
-                                            {/* Out of Stock Overlay */}
-                                            {product.stock === 0 && (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                    <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold">
-                                                        Out of Stock
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="p-5">
-                                            <Link href={`/products/${product._id}`} className="block mb-3">
-                                                <h3 className="text-[#9a6a63] font-semibold mb-2 line-clamp-2 group-hover:text-[#9a6a63]/80 transition">
-                                                    {product.name}
-                                                </h3>
-                                            </Link>
-
-                                            {/* Product specific details */}
-                                            {product.typeRef === 'Book' && product.details && (
-                                                <p className="text-sm text-[#9a6a63]/70 mb-2">
-                                                    by {(product.details as BookDetails).author || 'Unknown Author'}
-                                                </p>
-                                            )}
-                                            {product.typeRef === 'Stationary' && product.details && (
-                                                <p className="text-sm text-[#9a6a63]/70 mb-2">
-                                                    {(product.details as StationaryDetails).brand || 'Unknown Brand'}
-                                                </p>
-                                            )}
-                                            {product.typeRef === 'Flower' && product.details && (
-                                                <p className="text-sm text-[#9a6a63]/70 mb-2">
-                                                    {(product.details as FlowerDetails).color || 'Unknown Color'}
-                                                </p>
-                                            )}
-
-                                            {/* Rating */}
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <StarRating rating={product.averageRating || 0} />
-                                                <span className="text-sm text-[#9a6a63]/70">
-                                                    ({product.reviews?.length || 0})
-                                                </span>
-                                            </div>
-
-                                            {/* Price and Add to Cart */}
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-[#9a6a63] font-bold text-lg">
-                                                        €{product.discount > 0
-                                                            ? (product.price * (1 - product.discount / 100)).toFixed(2)
-                                                            : product.price.toFixed(2)
-                                                        }
-                                                    </p>
-                                                    {product.discount > 0 && (
-                                                        <p className="text-gray-400 line-through text-sm">
-                                                            €{product.price.toFixed(2)}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Action Buttons  -----------*/}
-                                            <div className="flex gap-3">
-
-                                                <button
-                                                    onClick={() => handleAddToCart(product)}
-                                                    disabled={product.stock === 0}
-                                                    className="px-4 py-2 text-white rounded-xl transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-                                                    style={{ background: 'linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)' }}
-                                                >
-                                                    <ShoppingCart size={16} /> Add
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {products.map((product) => (
+                                    <Link href={`/products/${product._id}`} key={product._id}>
+                                        <ProductCard
+                                            product={product}
+                                            showDetailedInfo={false}
+                                            asLink={true}
+                                        />
+                                    </Link>
                                 ))}
                             </div>
                         )}

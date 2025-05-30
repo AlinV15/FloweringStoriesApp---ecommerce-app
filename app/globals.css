@@ -1,6 +1,187 @@
 @import "tailwindcss";
 
 /* Add this to your globals.css file */
+/* globals.css - Adaugă variabilele CSS*/
+/* globals.css - Adaugă aceste variabile CSS la începutul fișierului */
+
+:root {
+  /* Shop Settings Colors - vor fi actualizate dinamic */
+  --color-primary: #9a6a63;
+  --color-secondary: #c1a5a2;
+  --color-accent: #f6eeec;
+
+  /* Font variables (păstrezi cele existente) */
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
+}
+
+/* Utility classes pentru culorile shop-ului */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.text-secondary {
+  color: var(--color-secondary);
+}
+
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}
+
+/* Button styles cu culorile shop-ului */
+.btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary);
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-secondary);
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Loading spinner cu culoarea shop-ului */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.loading-spinner::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Accent backgrounds cu culoarea shop-ului */
+.accent-section {
+  background-color: var(--color-accent);
+  padding: 2rem;
+  border-radius: 0.5rem;
+}
+
+/* Link styles cu culoarea primară */
+.link-primary {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.link-primary:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Badge styles */
+.badge-primary {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Card styles cu accent color */
+.card-accent {
+  border: 1px solid var(--color-accent);
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Form elements cu shop colors */
+.form-input {
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(154, 106, 99, 0.1);
+}
+
+/* Adaugă la sfârșitul fișierului după celelalte stiluri existente */
 
 @keyframes fadeIn {
   from {

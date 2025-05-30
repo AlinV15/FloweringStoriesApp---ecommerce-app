@@ -61,7 +61,7 @@ export async function GET(
     }
 }
 
-// PUT - Update specific setting by ID
+// app/api/admin/settings/[id]/route.ts - Updated PUT method
 export async function PUT(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -85,9 +85,12 @@ export async function PUT(
         const settingId = await params.id;
         const body = await req.json();
 
+        console.log('Received body:', JSON.stringify(body, null, 2));
+
         // Validate input
         const validationResult = shopSettingsUpdateSchema.safeParse(body);
         if (!validationResult.success) {
+            console.log('Validation failed:', validationResult.error.flatten());
             return NextResponse.json({
                 error: 'Validation failed',
                 details: validationResult.error.flatten(),
@@ -101,9 +104,34 @@ export async function PUT(
 
         const validatedData = validationResult.data;
 
-        // Special validations
-        if (validatedData.businessHours) {
-            for (const hours of validatedData.businessHours) {
+        // Clean the data - remove MongoDB internal fields and legacy fields before saving
+        const {
+            _id,
+            __v,
+            createdAt,
+            updatedAt,
+            createdBy,
+            paymentMethod, // Legacy field - remove
+            freeShipping,  // Legacy field - remove
+            ...cleanData
+        } = validatedData;
+
+        // Special handling for logo - remove _id if it exists
+        if (cleanData.logo && typeof cleanData.logo === 'object') {
+            const { _id: logoId, ...logoWithoutId } = cleanData.logo;
+            cleanData.logo = logoWithoutId;
+        }
+
+        // Ensure paymentMethods has at least one value if it's being set
+        if (cleanData.paymentMethods !== undefined && cleanData.paymentMethods.length === 0) {
+            cleanData.paymentMethods = ['stripe'];
+        }
+
+        console.log('Clean data for MongoDB:', JSON.stringify(cleanData, null, 2));
+
+        // Special validations for business hours
+        if (cleanData.businessHours && cleanData.businessHours.length > 0) {
+            for (const hours of cleanData.businessHours) {
                 if (hours.isOpen && hours.openTime && hours.closeTime) {
                     const [openHour, openMin] = hours.openTime.split(':').map(Number);
                     const [closeHour, closeMin] = hours.closeTime.split(':').map(Number);
@@ -128,7 +156,7 @@ export async function PUT(
             settingId,
             {
                 $set: {
-                    ...validatedData,
+                    ...cleanData,
                     updatedAt: new Date(),
                     updatedBy: session.user.id
                 }

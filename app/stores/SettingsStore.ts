@@ -84,7 +84,7 @@ const defaultSettings: ShopSettings = {
         { day: 'thursday', isOpen: true, openTime: '09:00', closeTime: '18:00' },
         { day: 'friday', isOpen: true, openTime: '09:00', closeTime: '18:00' },
         { day: 'saturday', isOpen: true, openTime: '09:00', closeTime: '16:00' },
-        { day: 'sunday', isOpen: false, openTime: '09:00', closeTime: '16:00' }
+        { day: 'sunday', isOpen: false, openTime: '09:00', closeTime: '16:00' },
     ],
     features: {
         enableReviews: true,
