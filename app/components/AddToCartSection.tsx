@@ -1,10 +1,9 @@
-// Pentru Product Detail Page, creează o componentă client separată:
-
+// components/AddToCartSection.tsx
 'use client';
 
 import { useState } from 'react';
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/app/stores/CartStore';
+import { ShoppingCart, Plus, Minus, Loader2 } from 'lucide-react';
 
 interface AddToCartSectionProps {
     product: {
@@ -20,8 +19,13 @@ interface AddToCartSectionProps {
 
 export default function AddToCartSection({ product }: AddToCartSectionProps) {
     const [quantity, setQuantity] = useState(1);
-    const addItem = useCartStore(state => state.addItem);
-    const getItemById = useCartStore(state => state.getItemById);
+    const [loading, setLoading] = useState(false);
+
+    const {
+        addItem,
+        getItemById,
+        isUpdatingStock
+    } = useCartStore();
 
     // Verifică dacă produsul este deja în coș
     const cartItem = getItemById(product._id);
@@ -33,9 +37,13 @@ export default function AddToCartSection({ product }: AddToCartSectionProps) {
         }
     };
 
-    const handleAddToCart = () => {
-        for (let i = 0; i < quantity; i++) {
-            addItem({
+    const handleAddToCart = async () => {
+        if (availableStock === 0) return;
+
+        setLoading(true);
+
+        try {
+            const cartProduct = {
                 id: product._id,
                 name: product.name,
                 price: product.price,
@@ -44,17 +52,38 @@ export default function AddToCartSection({ product }: AddToCartSectionProps) {
                 stock: product.stock,
                 discount: product.discount,
                 maxStock: product.stock
-            });
+            };
+
+            // ✅ Folosește noul addItem cu stock management
+            for (let i = 0; i < quantity; i++) {
+                const result = await addItem(cartProduct);
+
+                if (!result.success) {
+                    console.error('Failed to add item:', result.message);
+                    break; // Oprește dacă nu poate adăuga
+                }
+            }
+
+            // Reset quantity după adăugare cu succes
+            setQuantity(1);
+
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+
+            // Show error toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            toast.textContent = 'Failed to add to cart. Please try again.';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 3000);
+
+        } finally {
+            setLoading(false);
         }
-
-        // Afișează mesaj de succes
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        toast.textContent = `${quantity} item(s) added to cart!`;
-        document.body.appendChild(toast);
-        setTimeout(() => document.body.removeChild(toast), 3000);
-
-        setQuantity(1); // Reset quantity
     };
 
     return (
@@ -66,7 +95,7 @@ export default function AddToCartSection({ product }: AddToCartSectionProps) {
                         <button
                             onClick={() => handleQuantityChange(quantity - 1)}
                             className="px-4 py-2 hover:bg-[#9a6a63]/10 transition-colors text-[#9a6a63] font-medium disabled:opacity-50"
-                            disabled={quantity <= 1}
+                            disabled={quantity <= 1 || loading || isUpdatingStock}
                         >
                             <Minus size={16} />
                         </button>
@@ -76,30 +105,31 @@ export default function AddToCartSection({ product }: AddToCartSectionProps) {
                         <button
                             onClick={() => handleQuantityChange(quantity + 1)}
                             className="px-4 py-2 hover:bg-[#9a6a63]/10 transition-colors text-[#9a6a63] font-medium disabled:opacity-50"
-                            disabled={quantity >= availableStock}
+                            disabled={quantity >= availableStock || loading || isUpdatingStock}
                         >
                             <Plus size={16} />
                         </button>
                     </div>
                 </div>
 
-                {/* Stock info */}
-                <div className="mb-4 text-sm text-[#9a6a63]/70">
-                    {availableStock > 0 ? (
-                        <span>{availableStock} available {cartItem && `(${cartItem.quantity} in cart)`}</span>
-                    ) : (
-                        <span className="text-red-600">No more stock available</span>
-                    )}
-                </div>
 
                 <button
                     onClick={handleAddToCart}
                     className="w-full flex items-center justify-center gap-3 px-6 py-4 text-white rounded-xl transition-all transform hover:scale-105 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     style={{ background: 'linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)' }}
-                    disabled={availableStock === 0}
+                    disabled={availableStock === 0 || loading || isUpdatingStock}
                 >
-                    <ShoppingCart size={20} />
-                    {availableStock > 0 ? `Add ${quantity} to Cart` : 'Out of Stock'}
+                    {loading || isUpdatingStock ? (
+                        <>
+                            <Loader2 className="animate-spin" size={20} />
+                            Adding...
+                        </>
+                    ) : (
+                        <>
+                            <ShoppingCart size={20} />
+                            {availableStock > 0 ? `Add ${quantity} to Cart` : 'Out of Stock'}
+                        </>
+                    )}
                 </button>
             </div>
         </div>

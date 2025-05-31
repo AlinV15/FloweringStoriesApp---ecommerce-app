@@ -9,51 +9,56 @@ import {
     CheckCircle,
     Package,
     ArrowRight,
-    Home,
-    Loader2
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
 
 export default function SuccessPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { clearCart } = useCartStore();
+    const { completePurchase } = useCartStore();
 
     const [loading, setLoading] = useState(true);
     const [order, setOrder] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const sessionId = searchParams.get('session_id');
     const orderId = searchParams.get('order');
 
     useEffect(() => {
         if (sessionId && orderId) {
-            // Clear cart immediately
-            clearCart();
-
-            // Fetch order details
-            fetchOrder();
-
-            // Auto redirect after 10 seconds
-            const timer = setTimeout(() => {
-                router.push('/');
-            }, 10000);
-
-            return () => clearTimeout(timer);
+            loadOrderAndClearCart();
         } else {
+            setError("Missing payment information");
             router.push('/');
         }
     }, [sessionId, orderId]);
 
-    const fetchOrder = async () => {
+    const loadOrderAndClearCart = async () => {
         try {
-            const response = await fetch(`/api/orders?id=${orderId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setOrder(data);
+            await fetchOrderDetails();
+
+            if (completePurchase) {
+                await completePurchase();
             }
         } catch (error) {
-            console.error('Error fetching order:', error);
+            setError('Failed to load order details.');
+
+            if (completePurchase) {
+                await completePurchase();
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchOrderDetails = async () => {
+        const response = await fetch(`/api/order/${orderId}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                setOrder(data.order);
+            }
         }
     };
 
@@ -65,6 +70,29 @@ export default function SuccessPage() {
                     <div className="text-center py-16">
                         <Loader2 className="w-12 h-12 mx-auto mb-4 text-[#9a6a63] animate-spin" />
                         <p className="text-[#9a6a63]/70">Processing your order...</p>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-[#f6eeec] via-[#fefdfc] to-[#f2ded9]">
+                <Header />
+                <main className="max-w-4xl mx-auto px-4 md:px-6 py-32">
+                    <div className="text-center py-16">
+                        <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+                        <h1 className="text-2xl font-bold text-[#9a6a63] mb-4">Something went wrong</h1>
+                        <p className="text-[#9a6a63]/70 mb-6">We couldn't load your order details.</p>
+                        <button
+                            onClick={() => router.push('/products')}
+                            className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl transition-all transform hover:scale-105 shadow-lg font-medium"
+                            style={{ background: 'linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)' }}
+                        >
+                            Continue Shopping
+                        </button>
                     </div>
                 </main>
                 <Footer />
@@ -86,31 +114,55 @@ export default function SuccessPage() {
                         Thank you for your purchase. Your order has been confirmed!
                     </p>
 
-                    {orderId && (
-                        <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-[#c1a5a2]/20 shadow-xl p-6 mb-8">
-                            <div className="flex items-center justify-center gap-3 mb-4">
-                                <Package className="text-[#9a6a63]" size={24} />
-                                <h2 className="text-xl font-semibold text-[#9a6a63]">Order Details</h2>
-                            </div>
-
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-[#9a6a63]/70">Order Number:</span>
-                                    <span className="font-medium text-[#9a6a63]">#{orderId.slice(-8)}</span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                    <span className="text-[#9a6a63]/70">Payment Status:</span>
-                                    <span className="font-medium text-green-600">Confirmed</span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                    <span className="text-[#9a6a63]/70">Session ID:</span>
-                                    <span className="font-medium text-[#9a6a63] text-xs">{sessionId?.slice(-8)}</span>
-                                </div>
-                            </div>
+                    {/* Order Information Card */}
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-[#c1a5a2]/20 shadow-xl p-6 mb-8">
+                        <div className="flex items-center justify-center gap-3 mb-4">
+                            <Package className="text-[#9a6a63]" size={24} />
+                            <h2 className="text-xl font-semibold text-[#9a6a63]">Order Details</h2>
                         </div>
-                    )}
+
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-[#9a6a63]/70">Order Number:</span>
+                                <span className="font-medium text-[#9a6a63] font-mono">
+                                    #{orderId?.slice(-8)}
+                                </span>
+                            </div>
+
+                            <div className="flex justify-between">
+                                <span className="text-[#9a6a63]/70">Payment Status:</span>
+                                <span className="font-medium text-green-600 flex items-center gap-1">
+                                    <CheckCircle size={14} />
+                                    Confirmed
+                                </span>
+                            </div>
+
+                            {order && (
+                                <>
+                                    <div className="flex justify-between">
+                                        <span className="text-[#9a6a63]/70">Total Amount:</span>
+                                        <span className="font-medium text-[#9a6a63]">
+                                            €{order.totalAmount?.toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between">
+                                        <span className="text-[#9a6a63]/70">Delivery Method:</span>
+                                        <span className="font-medium text-[#9a6a63] capitalize">
+                                            {order.deliveryMethod === 'courier' ? 'Courier Delivery' : 'Store Pickup'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between">
+                                        <span className="text-[#9a6a63]/70">Order Date:</span>
+                                        <span className="font-medium text-[#9a6a63]">
+                                            {new Date(order.createdAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* What's Next */}
@@ -172,11 +224,17 @@ export default function SuccessPage() {
                     </button>
                 </div>
 
-                {/* Auto redirect notice */}
+                {/* Thank you message */}
                 <div className="text-center mt-8">
-                    <p className="text-sm text-[#9a6a63]/70">
-                        You'll be redirected to the homepage in 10 seconds...
+                    <p className="text-sm text-[#9a6a63]/70 mb-3">
+                        Thank you for shopping with us!
                     </p>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-sm text-[#9a6a63] hover:underline"
+                    >
+                        Return to Homepage
+                    </button>
                 </div>
             </main>
             <Footer />

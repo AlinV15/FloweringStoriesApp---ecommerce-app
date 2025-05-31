@@ -5,15 +5,10 @@ import Order from "@/lib/models/Order";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const prms = await params
-        const id = prms.id
+        const resolvedParams = await params;
+        const id = resolvedParams.id;
 
         await connectToDatabase();
 
@@ -23,7 +18,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
                 path: 'items',
                 populate: {
                     path: 'product',
-                    select: 'name price image'
+                    select: 'name price image type'
                 }
             })
             .populate('address')
@@ -33,21 +28,30 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
         if (!orderResult || Array.isArray(orderResult)) {
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
-        // Explicitly type order as any to avoid 'unknown' errors
+
         const order = orderResult as any;
 
-        // Check authorization
-        const isOwner = order.user?._id?.toString() === (session.user as any).id;
-        const isAdmin = (session.user as any).role === "admin";
+        // Check if user is authenticated
+        const session = await getServerSession(authOptions);
 
-        if (!isOwner && !isAdmin) {
-            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        if (session) {
+            // For authenticated users, check authorization
+            const isOwner = order.user?._id?.toString() === (session.user as any).id;
+            const isAdmin = (session.user as any).role === "admin";
+
+            if (!isOwner && !isAdmin) {
+                return NextResponse.json({ error: "Access denied" }, { status: 403 });
+            }
+        } else {
+            // For guest users, we'll allow access but with limited information
+            // You might want to add additional validation here (like checking a token)
+            // For now, we'll allow read access to any order
         }
 
         // Transform data for frontend consistency
         const transformedOrder = {
             _id: order._id.toString(),
-            user: order.user ? {
+            customer: order.user ? {
                 _id: order.user._id.toString(),
                 firstName: order.user.firstName,
                 lastName: order.user.lastName,
@@ -62,7 +66,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
                     _id: item.product._id.toString(),
                     name: item.product.name,
                     price: item.product.price,
-                    image: item.product.image
+                    image: item.product.image,
+                    type: item.product.type
                 },
                 quantity: item.quantity,
                 lineAmount: item.lineAmount

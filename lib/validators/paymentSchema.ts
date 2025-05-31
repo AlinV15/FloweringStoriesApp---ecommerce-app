@@ -12,3 +12,5 @@ export const paymentSchema = z.object({
     ]).default('processing'),
     method: z.string().optional()
 });
+
+export type PaymentType = z.infer<typeof paymentSchema>;

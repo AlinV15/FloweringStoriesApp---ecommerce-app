@@ -42,6 +42,8 @@ interface CartStore {
     getOriginalTotal: () => number;
     getDiscountPercentage: () => number;
     getItemById: (id: string) => CartItem | undefined;
+    completePurchase: () => Promise<void>;
+    markItemsAsPurchased: (itemIds: string[]) => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -200,27 +202,6 @@ export const useCartStore = create<CartStore>()(
                 }
             },
 
-            // Enhanced clearCart with stock release
-            clearCart: async () => {
-                try {
-                    set({ isUpdatingStock: true });
-
-                    const items = get().items;
-
-                    // Release all reserved stock
-                    for (const item of items) {
-                        await get().releaseStock(item.id, item.quantity);
-                    }
-
-                    set({ items: [] });
-                    showToast('Cart cleared', 'info');
-                } catch (error) {
-                    console.error('Error clearing cart:', error);
-                    showToast('Failed to clear cart. Please try again.', 'error');
-                } finally {
-                    set({ isUpdatingStock: false });
-                }
-            },
 
             toggleCart: () => {
                 set({ isOpen: !get().isOpen });
@@ -385,7 +366,59 @@ export const useCartStore = create<CartStore>()(
                 const totalDiscount = get().getTotalDiscount();
                 return originalTotal > 0 ? (totalDiscount / originalTotal) * 100 : 0;
             },
+            // Când plata reușește - nu elibera stocul, doar șterge cart-ul
+            completePurchase: async () => {
+
+                // Nu elibera stocul! Produsele au fost vândute
+                set({ items: [] });
+
+                showToast('Order completed! Thank you for your purchase!', 'success');
+            },
+
+            // Marchează anumite produse ca fiind cumpărate
+            markItemsAsPurchased: async (itemIds: string[]) => {
+
+
+                // Șterge doar produsele cumpărate din cart fără să elibereze stocul
+                set({
+                    items: get().items.filter(item => !itemIds.includes(item.id))
+                });
+            },
+
+            // Actualizează clearCart să aibă un parametru pentru purchase
+            clearCart: async (isPurchase: boolean = false) => {
+                try {
+                    set({ isUpdatingStock: true });
+
+                    const items = get().items;
+
+                    if (!isPurchase) {
+                        // Doar dacă NU e purchase, eliberează stocul
+                        // (user abandonează cart-ul)
+
+                        for (const item of items) {
+                            await get().releaseStock(item.id, item.quantity);
+                        }
+                        showToast('Cart cleared', 'info');
+                    } else {
+                        // Dacă e purchase, nu elibera stocul
+
+                        showToast('Order completed!', 'success');
+                    }
+
+                    set({ items: [] });
+                } catch (error) {
+
+                    if (!isPurchase) {
+                        showToast('Failed to clear cart. Please try again.', 'error');
+                    }
+                } finally {
+                    set({ isUpdatingStock: false });
+                }
+            },
         }),
+
+
         {
             name: 'cart-storage',
             storage: createJSONStorage(() => localStorage),

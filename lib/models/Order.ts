@@ -11,7 +11,7 @@ const OrderSchema = new mongoose.Schema({
   paymentMethod: String,
   payment: {
     stripePaymentIntentId: { type: String, required: false }, // ✅ SCHIMBĂ ÎN FALSE
-    amount: { type: Number, required: true },
+    amount: { type: Number, required: false },
     currency: { type: String, default: 'eur' },
     status: {
       type: String,

@@ -139,8 +139,8 @@ function PaymentForm({ clientSecret, orderId, onSuccess, onError }: PaymentFormP
                 type="submit"
                 disabled={!stripe || loading || !cardComplete}
                 className={`w-full flex items-center justify-center gap-3 px-6 py-4 text-white rounded-xl font-medium transition-all ${loading || !cardComplete
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'transform hover:scale-105 shadow-lg'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'transform hover:scale-105 shadow-lg'
                     }`}
                 style={!loading && cardComplete ? { background: 'linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)' } : {}}
             >
@@ -185,7 +185,7 @@ export default function PaymentPage() {
 
     const fetchOrder = async () => {
         try {
-            const response = await fetch(`/api/orders?id=${orderId}`);
+            const response = await fetch(`/api/order?id=${orderId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch order');
             }

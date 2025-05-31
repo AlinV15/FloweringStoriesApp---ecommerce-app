@@ -1,13 +1,19 @@
-// middleware.ts (root)
+// middleware.ts (root) - VERSIUNEA CORECTATĂ
 import { withAuth } from "next-auth/middleware"
 import { NextRequest, NextResponse } from "next/server";
+
 // Funcție separată pentru verificarea maintenance mode
 async function checkMaintenanceMode(request: NextRequest) {
-    // Skip verificarea pentru admin și API routes
+    // Skip verificarea pentru admin, API routes, auth routes și static files
     if (request.nextUrl.pathname.startsWith('/admin') ||
         request.nextUrl.pathname.startsWith('/api') ||
         request.nextUrl.pathname.startsWith('/_next') ||
-        request.nextUrl.pathname === '/maintenance') {
+        request.nextUrl.pathname.startsWith('/auth') ||  // ✅ Adăugat
+        request.nextUrl.pathname === '/maintenance' ||
+        request.nextUrl.pathname === '/login' ||         // ✅ Adăugat
+        request.nextUrl.pathname === '/register' ||      // ✅ Adăugat
+        request.nextUrl.pathname === '/forgot-password' ||  // ✅ Adăugat
+        request.nextUrl.pathname === '/reset-password') {   // ✅ Adăugat
         return null;
     }
 
@@ -37,28 +43,36 @@ async function checkMaintenanceMode(request: NextRequest) {
 }
 
 export default withAuth(
-    function middleware(req) {
-        // Logic suplimentar dacă e necesar
+    async function middleware(req) {
+        // Verifică maintenance mode pentru rutele publice
+        const maintenanceResponse = await checkMaintenanceMode(req);
+        if (maintenanceResponse) {
+            return maintenanceResponse;
+        }
+
+        // Permite accesul pentru admin routes (withAuth se ocupă de autentificare)
+        return NextResponse.next();
     },
     {
         callbacks: {
             authorized: ({ token, req }) => {
-                // Doar admin poate accesa /admin
+                // ✅ DOAR pentru admin routes verifică autentificarea
                 if (req.nextUrl.pathname.startsWith("/admin")) {
-                    return token?.role === "admin"
+                    return token?.role === "admin";
                 }
-                return !!token
+
+                // ✅ Pentru toate celelalte rute, permite accesul (public)
+                return true;
             },
         },
     }
 )
 
 export const config = {
-    // Extinde matcher-ul pentru a include toate rutele
+    // ✅ MATCHER CORECT - doar admin routes trebuie protejate
     matcher: [
-        // Admin routes (autentificare necesară)
-        "/admin/:path*",
-        // Toate celelalte rute publice (pentru maintenance check)
-        "/((?!api|_next/static|_next/image|favicon.ico|maintenance).*)"
+        // Doar admin routes (autentificare necesară)
+        "/admin/:path*"
+        // ❌ NU include toate rutele publice aici!
     ]
 }

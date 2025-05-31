@@ -5,6 +5,7 @@ import Footer from '@/app/components/Footer';
 import ProductTabs from '@/app/components/ProductTabs';
 import { Star, Calendar, Package, Palette, Book, Ruler, Heart, Info, ShoppingCart, ArrowLeft, Clock, Truck, Shield, Award, User, MessageCircle, ThumbsUp } from 'lucide-react';
 import AddToCartSection from '@/app/components/AddToCartSection'; // sau calea corectă
+import StockStatus from '@/app/components/StockStatus';
 
 interface Product {
     _id: string;
@@ -523,12 +524,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                         </div>
 
                         {/* Stock Status */}
-                        <div className="flex items-center gap-2 p-4 bg-white/90 backdrop-blur-sm rounded-xl border border-[#c1a5a2]/20 shadow-lg">
-                            <Package size={20} className={product.stock > 0 ? "text-green-600" : "text-red-600"} />
-                            <span className={`font-medium ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}>
-                                {product.stock > 0 ? `In Stock (${product.stock} available)` : 'Out of Stock'}
-                            </span>
-                        </div>
+                        <StockStatus productId={product._id} initialStock={product.stock} />
 
                         {/* Description */}
                         {description && (

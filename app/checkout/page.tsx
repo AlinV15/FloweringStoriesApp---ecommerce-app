@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -21,59 +21,91 @@ import {
     AlertCircle
 } from 'lucide-react';
 
-interface OrderFormData {
-    // Customer Info
+// Type definitions
+interface UserData {
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
+    newsletter: boolean;
+    address?: {
+        street: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+        details: string;
+    } | null;
+}
 
-    // Delivery Address
+interface OrderFormData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
     street: string;
     city: string;
     state: string;
     postalCode: string;
     country: string;
     details: string;
-
-    // Delivery Options
     deliveryMethod: 'courier' | 'pickup';
-
-    // Payment
     paymentMethod: 'card';
-
-    // Additional
     note: string;
-
-    // Guest checkout
     createAccount: boolean;
     newsletter: boolean;
 }
 
+interface FormErrors {
+    [key: string]: string;
+}
+
+// Custom hook for fetching user checkout data
+const useUserCheckoutData = () => {
+    const { data: session } = useSession();
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (session?.user?.id) {
+            fetchUserData();
+        }
+    }, [session]);
+
+    const fetchUserData = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/user/checkout-data');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    setUserData(result.data);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { userData, loading };
+};
+
 export default function CheckoutPage() {
     const { data: session } = useSession();
     const router = useRouter();
-    const { items, getTotalPrice, clearCart } = useCartStore();
+    const { items, getTotalPrice } = useCartStore();
+    const { userData, loading: userDataLoading } = useUserCheckoutData();
 
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [errors, setErrors] = useState<FormErrors>({});
 
-    // Helper to extract first and last name from session.user.name
-    const getFirstAndLastName = (name?: string | null) => {
-        if (!name) return { firstName: '', lastName: '' };
-        const parts = name.split(' ');
-        return {
-            firstName: parts[0] || '',
-            lastName: parts.slice(1).join(' ') || ''
-        };
-    };
-
-    const { firstName, lastName } = getFirstAndLastName(session?.user?.name);
-
+    // Initialize form data
     const [formData, setFormData] = useState<OrderFormData>({
-        firstName: firstName,
-        lastName: lastName,
-        email: session?.user?.email || '',
+        firstName: '',
+        lastName: '',
+        email: '',
         phone: '',
         street: '',
         city: '',
@@ -88,6 +120,29 @@ export default function CheckoutPage() {
         newsletter: false
     });
 
+    // Update form data when user data is loaded
+    useEffect(() => {
+        if (userData) {
+            setFormData(prevData => ({
+                ...prevData,
+                firstName: userData.firstName || '',
+                lastName: userData.lastName || '',
+                email: userData.email || '',
+                phone: userData.phone || '',
+                newsletter: userData.newsletter || false,
+                // If user has a saved address, populate it
+                ...(userData.address && {
+                    street: userData.address.street || '',
+                    city: userData.address.city || '',
+                    state: userData.address.state || '',
+                    postalCode: userData.address.postalCode || '',
+                    country: userData.address.country || 'Romania',
+                    details: userData.address.details || ''
+                })
+            }));
+        }
+    }, [userData]);
+
     const subtotal = getTotalPrice();
     const shipping = formData.deliveryMethod === 'pickup' ? 0 : (subtotal > 100 ? 0 : 15);
     const total = subtotal + shipping;
@@ -96,6 +151,22 @@ export default function CheckoutPage() {
     if (items.length === 0) {
         router.push('/cart');
         return null;
+    }
+
+    // Show loading state while fetching user data
+    if (userDataLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-[#f6eeec] via-[#fefdfc] to-[#f2ded9]">
+                <Header />
+                <main className="max-w-7xl mx-auto px-4 md:px-6 py-32">
+                    <div className="text-center">
+                        <div className="w-8 h-8 border-2 border-[#9a6a63] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-[#9a6a63]/70">Loading your information...</p>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
     }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -112,7 +183,7 @@ export default function CheckoutPage() {
     };
 
     const validateForm = (): boolean => {
-        const newErrors: { [key: string]: string } = {};
+        const newErrors: FormErrors = {};
 
         // Required fields
         if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
@@ -145,9 +216,9 @@ export default function CheckoutPage() {
         setLoading(true);
 
         try {
-            // Create order
+            // Create order data
             const orderData = {
-                items: items.map(item => ({
+                items: items.map((item: any) => ({
                     product: item.id,
                     quantity: item.quantity,
                     lineAmount: (item.discount > 0
@@ -158,7 +229,8 @@ export default function CheckoutPage() {
                     firstName: formData.firstName,
                     lastName: formData.lastName,
                     email: formData.email,
-                    phone: formData.phone
+                    phone: formData.phone,
+                    newsletter: formData.newsletter
                 },
                 address: formData.deliveryMethod === 'courier' ? {
                     street: formData.street,
@@ -198,7 +270,7 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                     orderId: order._id,
-                    lineItems: items.map(item => ({
+                    lineItems: items.map((item: any) => ({
                         name: item.name,
                         unitAmount: item.discount > 0
                             ? item.price * (1 - item.discount / 100)
@@ -213,9 +285,6 @@ export default function CheckoutPage() {
             }
 
             const { url } = await paymentResponse.json();
-
-            // Clear cart before redirect (optional - poate să rămână până la success)
-            // clearCart();
 
             // Redirect to Stripe Checkout
             window.location.href = url;
@@ -575,7 +644,7 @@ export default function CheckoutPage() {
 
                             {/* Items */}
                             <div className="space-y-4 mb-6">
-                                {items.map((item) => (
+                                {items.map((item: any) => (
                                     <div key={item.id} className="flex gap-3">
                                         <div className="relative w-12 h-12 flex-shrink-0">
                                             <Image
