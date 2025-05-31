@@ -1,18 +1,27 @@
-// app/components/ProductCard.tsx - Unified card with type-specific details
+// app/components/ProductCard.tsx - Enhanced with real-time stock management
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
     Star, ShoppingCart, Book, Pencil, Flower, User, Calendar,
     Bookmark, Globe, Hash, Building, Droplets, Clock, Sun,
-    Ruler, Package, Palette
+    Ruler, Package, Palette, Leaf, AlertCircle, CheckCircle,
+    Loader2
 } from 'lucide-react';
 import { useCartStore } from '@/app/stores/CartStore';
+
+// Import both types for compatibility
 import { ProductEntry } from '@/app/types';
+import {
+    Product,
+    isBookProduct,
+    isStationaryProduct,
+    isFlowerProduct
+} from '@/app/types/product';
 
 interface ProductCardProps {
-    product: ProductEntry;
+    product: Product | ProductEntry;
     showDetailedInfo?: boolean;
     className?: string;
     asLink?: boolean;
@@ -35,6 +44,34 @@ const StarRating = ({ rating }: { rating: number }) => {
     }
 
     return <div className="flex gap-1">{stars}</div>;
+};
+
+// Stock indicator component
+const StockIndicator = ({ stock, isLowStock }: { stock: number; isLowStock: boolean }) => {
+    if (stock === 0) {
+        return (
+            <div className="flex items-center gap-1 text-red-500">
+                <AlertCircle size={12} />
+                <span className="text-xs font-medium">Out of Stock</span>
+            </div>
+        );
+    }
+
+    if (isLowStock) {
+        return (
+            <div className="flex items-center gap-1 text-orange-500">
+                <AlertCircle size={12} />
+                <span className="text-xs font-medium">Low Stock ({stock})</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-1 text-green-500">
+            <CheckCircle size={12} />
+            <span className="text-xs font-medium">In Stock ({stock})</span>
+        </div>
+    );
 };
 
 // Flower-specific components
@@ -61,67 +98,114 @@ export default function ProductCard({
     asLink = false
 }: ProductCardProps) {
     const [imageError, setImageError] = useState(false);
-    const addItem = useCartStore(state => state.addItem);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [currentStock, setCurrentStock] = useState(product.stock);
 
-    const handleAddToCart = (e: React.MouseEvent) => {
+    const { addItem, isUpdatingStock } = useCartStore();
+
+    // Check if stock is low (less than 10% of original or less than 5 items)
+    const isLowStock = currentStock > 0 && currentStock <= Math.max(5, Math.floor(product.stock * 0.1));
+
+    // Sync stock periodically
+    useEffect(() => {
+        const syncStock = async () => {
+            try {
+                const response = await fetch(`/api/product/${product._id}/check-stock`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        setCurrentStock(data.product.stock);
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing stock:', error);
+            }
+        };
+
+        // Sync stock every 30 seconds
+        const interval = setInterval(syncStock, 30000);
+
+        return () => clearInterval(interval);
+    }, [product._id]);
+
+    const handleAddToCart = async (e: React.MouseEvent) => {
         if (asLink) {
             e.preventDefault();
             e.stopPropagation();
         }
 
-        addItem({
-            id: product._id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            type: product.type,
-            stock: product.stock,
-            discount: product.discount,
-            maxStock: product.stock
-        });
+        if (currentStock === 0 || isAddingToCart) return;
 
-        // Show toast notification
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        toast.textContent = `${product.name} added to cart!`;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
+        setIsAddingToCart(true);
+
+        try {
+            // Handle both Product and ProductEntry types
+            let productType: string;
+            if ('type' in product && product.type) {
+                productType = product.type;
+            } else if (product && typeof product === 'object' && 'typeRef' in product && (product as any).typeRef) {
+                productType = ((product as any).typeRef as string).toLowerCase();
+            } else {
+                productType = 'product';
             }
-        }, 3000);
+
+            const result = await addItem({
+                id: product._id,
+                name: product.name,
+                price: product.price,
+                image: product.image,
+                type: productType,
+                stock: currentStock,
+                discount: product.discount,
+                maxStock: currentStock
+            });
+
+            if (result.success) {
+                // Update local stock immediately for better UX
+                setCurrentStock(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            showErrorToast('Failed to add item to cart. Please try again.');
+        } finally {
+            setIsAddingToCart(false);
+        }
     };
 
     const finalPrice = product.discount > 0
         ? product.price * (1 - product.discount / 100)
         : product.price;
 
-    // Calculate average rating
-    const averageRating = product.reviews?.length ?
-        product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length : 0;
+    // Calculate average rating - handle both unified and API formats
+    const averageRating = (() => {
+        if ('averageRating' in product && typeof product.averageRating === 'number') {
+            return product.averageRating;
+        }
+        if (product.reviews?.length) {
+            return product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length;
+        }
+        return 0;
+    })();
 
-    // Get type icon and colors
+    // Get type icon with original unified styling
     const getTypeInfo = () => {
-        switch (product.typeRef) {
+        const typeRef = product.typeRef;
+        switch (typeRef) {
             case 'Book':
                 return {
-                    icon: <Book size={16} className="text-sky-900 bg-blue-300 h-7 w-7 p-1 rounded-xl" />,
-                    colors: { primary: '#9a6a63', secondary: '#c1a5a2' }
+                    icon: <Book size={16} className="text-sky-900 bg-blue-300 h-7 w-7 p-1 rounded-xl" />
                 };
             case 'Stationary':
                 return {
-                    icon: <Pencil size={16} className="text-green-900 bg-emerald-300 h-7 w-7 p-1 rounded-xl" />,
-                    colors: { primary: '#9a6a63', secondary: '#c1a5a2' }
+                    icon: <Pencil size={16} className="text-green-900 bg-emerald-300 h-7 w-7 p-1 rounded-xl" />
                 };
             case 'Flower':
                 return {
-                    icon: <Flower size={16} className="text-pink-900 bg-red-300 h-7 w-7 p-1 rounded-xl" />,
-                    colors: { primary: '#9c6b63', secondary: '#e5d4ce' }
+                    icon: <Flower size={16} className="text-pink-900 bg-red-300 h-7 w-7 p-1 rounded-xl" />
                 };
             default:
                 return {
-                    icon: <Book size={16} className="text-gray-500" />,
-                    colors: { primary: '#9a6a63', secondary: '#c1a5a2' }
+                    icon: <Package size={16} className="text-gray-500" />
                 };
         }
     };
@@ -143,210 +227,185 @@ export default function ProductCard({
     };
 
     // Format date
-    const formatDate = (date: Date) => {
+    const formatDate = (date: Date | string) => {
         return new Date(date).getFullYear();
     };
 
-    // Get product specific details
+    // Get product details with consistent layout for all types
     const getProductDetails = () => {
-        if (!product.details) return null;
+        let details: any = null;
 
-        switch (product.typeRef) {
-            case 'Book':
-                const bookDetails = product.details as any;
-                return (
-                    <>
-                        {/* Author */}
-                        {bookDetails.author && (
-                            <div className="flex items-center gap-2 mb-2">
-                                <User size={14} className="text-[#9a6a63]" />
-                                <p className="text-sm text-[#9a6a63]/80 font-medium">
-                                    by {bookDetails.author}
-                                </p>
-                            </div>
-                        )}
+        if ('details' in product && product.details) {
+            details = product.details;
+        } else if ('typeObject' in product && product.typeObject) {
+            details = product.typeObject;
+        }
 
-                        {/* Book Specific Details */}
-                        <div className="space-y-1 mb-3 text-xs text-gray-600">
-                            {/* Publisher & Publication Date */}
-                            <div className="flex items-center justify-between">
-                                {bookDetails.publisher && (
-                                    <div className="flex items-center gap-1">
-                                        <Building size={12} />
-                                        <span>{bookDetails.publisher}</span>
-                                    </div>
-                                )}
-                                {bookDetails.publicationDate && (
-                                    <div className="flex items-center gap-1">
-                                        <Calendar size={12} />
-                                        <span>{formatDate(bookDetails.publicationDate)}</span>
-                                    </div>
-                                )}
-                            </div>
+        if (!details) return null;
 
-                            {/* Pages & Language */}
-                            <div className="flex items-center justify-between">
-                                {bookDetails.pages && (
-                                    <div className="flex items-center gap-1">
-                                        <Bookmark size={12} />
-                                        <span>{bookDetails.pages} pages</span>
-                                    </div>
-                                )}
-                                {bookDetails.language && (
-                                    <div className="flex items-center gap-1">
-                                        <Globe size={12} />
-                                        <span>{bookDetails.language}</span>
-                                    </div>
-                                )}
-                            </div>
+        const typeRef = product.typeRef;
 
-                            {/* ISBN */}
-                            {bookDetails.isbn && showDetailedInfo && (
+        // Always return the same structure for consistent card height
+        return (
+            <div className="mb-3">
+                {/* Primary Info Line - Always present */}
+                <div className="flex items-center gap-2 mb-2">
+                    <User size={14} className="text-[#9a6a63]" />
+                    <p className="text-sm text-[#9a6a63]/80 font-medium line-clamp-1">
+                        {typeRef === 'Book' && details.author ? `by ${details.author}` :
+                            typeRef === 'Stationary' && details.brand ? details.brand :
+                                typeRef === 'Flower' && details.color ? `${details.color} • ${details.season}` :
+                                    'Premium Quality'}
+                    </p>
+                </div>
+
+                {/* Secondary Info - Always 2 lines for consistency */}
+                <div className="space-y-1 mb-2 text-xs text-gray-600 min-h-[32px]">
+                    {/* First info line */}
+                    <div className="flex items-center justify-between">
+                        {typeRef === 'Book' && details.publisher ? (
+                            <>
                                 <div className="flex items-center gap-1">
-                                    <Hash size={12} />
-                                    <span className="font-mono text-xs">{bookDetails.isbn}</span>
+                                    <Building size={12} />
+                                    <span className="truncate">{details.publisher}</span>
                                 </div>
-                            )}
-                        </div>
-                    </>
-                );
-
-            case 'Stationary':
-                const stationaryDetails = product.details as any;
-                return (
-                    <>
-                        {/* Brand */}
-                        {stationaryDetails.brand && (
-                            <div className="flex items-center gap-2 mb-2">
-                                <Building size={14} className="text-[#9a6a63]" />
-                                <p className="text-sm text-[#9a6a63]/80 font-medium">
-                                    {stationaryDetails.brand}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Stationary Specific Details */}
-                        <div className="space-y-1 mb-3 text-xs text-gray-600">
-                            {/* Type & Material */}
-                            <div className="flex items-center justify-between">
-                                {stationaryDetails.type && (
-                                    <div className="flex items-center gap-1">
-                                        <Package size={12} />
-                                        <span>{stationaryDetails.type}</span>
-                                    </div>
-                                )}
-                                {stationaryDetails.material && (
-                                    <div className="flex items-center gap-1">
-                                        <Ruler size={12} />
-                                        <span>{stationaryDetails.material}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Colors */}
-                            {stationaryDetails.color && stationaryDetails.color.length > 0 && (
                                 <div className="flex items-center gap-1">
-                                    <Palette size={12} />
-                                    <span>{stationaryDetails.color.join(', ')}</span>
+                                    <Calendar size={12} />
+                                    <span>{formatDate(details.publicationDate)}</span>
                                 </div>
-                            )}
-
-                            {/* Dimensions */}
-                            {stationaryDetails.dimensions && showDetailedInfo && (
+                            </>
+                        ) : typeRef === 'Stationary' && details.type ? (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Package size={12} />
+                                    <span className="truncate">{details.type}</span>
+                                </div>
                                 <div className="flex items-center gap-1">
                                     <Ruler size={12} />
-                                    <span>
-                                        {stationaryDetails.dimensions.height}×{stationaryDetails.dimensions.width}×{stationaryDetails.dimensions.depth}cm
+                                    <span className="truncate">{details.material || 'Quality'}</span>
+                                </div>
+                            </>
+                        ) : typeRef === 'Flower' ? (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Droplets size={12} />
+                                    <span>{details.freshness || 90}% fresh</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Clock size={12} />
+                                    <span>{details.lifespan || 7} days</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Package size={12} />
+                                    <span>Premium</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Star size={12} />
+                                    <span>Quality</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Second info line */}
+                    <div className="flex items-center justify-between">
+                        {typeRef === 'Book' && details.pages ? (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Bookmark size={12} />
+                                    <span>{details.pages} pages</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Globe size={12} />
+                                    <span>{details.language || 'English'}</span>
+                                </div>
+                            </>
+                        ) : typeRef === 'Stationary' && details.color ? (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Palette size={12} />
+                                    <span className="truncate">
+                                        {Array.isArray(details.color) ? details.color.slice(0, 2).join(', ') : details.color}
                                     </span>
                                 </div>
-                            )}
-                        </div>
-                    </>
-                );
-
-            case 'Flower':
-                const flowerDetails = product.details as any;
-                return (
-                    <>
-                        {/* Color and Season */}
-                        <div className="text-sm text-[#9c6b63]/80 mb-2 flex items-center gap-1">
-                            <div
-                                className="w-3 h-3 rounded-full border border-white shadow-sm"
-                                style={{ backgroundColor: flowerDetails.color?.toLowerCase() }}
-                            ></div>
-                            {flowerDetails.color} • {flowerDetails.season}
-                        </div>
-
-                        {/* Freshness and Lifespan */}
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                            {flowerDetails.freshness && (
-                                <span className="px-2 py-1 rounded-full text-white flex items-center gap-1" style={{ backgroundColor: '#9c6b63' }}>
-                                    <Droplets size={12} />
-                                    {flowerDetails.freshness}%
-                                </span>
-                            )}
-                            {flowerDetails.lifespan && (
-                                <span className="px-2 py-1 rounded-full bg-[#f4ede8] text-[#9c6b63] flex items-center gap-1">
-                                    <Clock size={12} />
-                                    {flowerDetails.lifespan}d
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Detailed Flower Info */}
-                        {showDetailedInfo && (
-                            <div className="mb-3 text-xs text-gray-600 space-y-1">
-                                {flowerDetails.season && (
-                                    <div className="flex items-center gap-1">
-                                        <Sun size={12} />
-                                        <span>Season: {flowerDetails.season}</span>
-                                    </div>
-                                )}
-                                {flowerDetails.expiryDate && (
-                                    <div className="flex items-center gap-1">
-                                        <Calendar size={12} />
-                                        <ExpiryStatus expiryDate={flowerDetails.expiryDate} />
-                                    </div>
-                                )}
-                            </div>
+                                <div className="flex items-center gap-1">
+                                    <Building size={12} />
+                                    <span>Premium</span>
+                                </div>
+                            </>
+                        ) : typeRef === 'Flower' ? (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Sun size={12} />
+                                    <span>{details.season || 'All Season'}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Leaf size={12} />
+                                    <span>Fresh Cut</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={12} />
+                                    <span>Latest</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Star size={12} />
+                                    <span>Featured</span>
+                                </div>
+                            </>
                         )}
-                    </>
-                );
+                    </div>
+                </div>
 
-            default:
-                return null;
-        }
+                {/* Stock Indicator */}
+                <div className="mt-2">
+                    <StockIndicator stock={currentStock} isLowStock={isLowStock} />
+                </div>
+            </div>
+        );
     };
 
     // Get special badges
     const getSpecialBadges = () => {
-        if (!product.details) return null;
+        let details: any = null;
 
-        switch (product.typeRef) {
+        if ('details' in product && product.details) {
+            details = product.details;
+        } else if ('typeObject' in product && product.typeObject) {
+            details = product.typeObject;
+        }
+
+        if (!details) return null;
+
+        const typeRef = product.typeRef;
+
+        switch (typeRef) {
             case 'Book':
-                const bookDetails = product.details as any;
-                return bookDetails.genre ? (
-                    <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${getGenreColor(bookDetails.genre)}`}>
-                        {bookDetails.genre}
+                return details.genre ? (
+                    <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${getGenreColor(details.genre)}`}>
+                        {details.genre}
                     </div>
                 ) : null;
 
             case 'Stationary':
-                const stationaryDetails = product.details as any;
-                return stationaryDetails.type ? (
+                return details.type ? (
                     <div className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {stationaryDetails.type}
+                        {details.type}
                     </div>
                 ) : null;
 
             case 'Flower':
-                const flowerDetails = product.details as any;
-                return flowerDetails.color ? (
+                return details.color ? (
                     <div
                         className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium text-white"
-                        style={{ backgroundColor: flowerDetails.color?.toLowerCase() }}
+                        style={{ backgroundColor: details.color?.toLowerCase() || '#gray' }}
                     >
-                        {flowerDetails.color}
+                        {details.color}
                     </div>
                 ) : null;
 
@@ -358,7 +417,7 @@ export default function ProductCard({
     const typeInfo = getTypeInfo();
 
     return (
-        <div className={`group rounded-2xl overflow-hidden bg-white/95 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-500 border border-[${typeInfo.colors.secondary}]/20 hover:border-[${typeInfo.colors.primary}]/40 transform hover:-translate-y-2 ${className} ${asLink ? 'cursor-pointer' : ''}`}>
+        <div className={`group rounded-2xl overflow-hidden bg-white/95 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-500 border border-[#c1a5a2]/20 hover:border-[#9a6a63]/40 transform hover:-translate-y-2 ${className} ${asLink ? 'cursor-pointer' : ''} flex flex-col h-full ${currentStock === 0 ? 'opacity-75' : ''}`}>
             {/* Image Section */}
             <div className="relative aspect-[3/4] overflow-hidden">
                 <Image
@@ -386,40 +445,48 @@ export default function ProductCard({
                     </div>
                 )}
 
-                {/* Out of Stock Overlay */}
-                {product.stock === 0 && (
+                {/* Stock Status Badge */}
+                {currentStock === 0 && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold">
                             Out of Stock
                         </span>
                     </div>
                 )}
+
+                {isLowStock && currentStock > 0 && (
+                    <div className="absolute bottom-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                        Only {currentStock} left!
+                    </div>
+                )}
             </div>
 
-            {/* Content Section */}
-            <div className="p-5">
-                {/* Title */}
-                <div className="block mb-3">
-                    <h3 className={`text-gray-800 font-semibold mb-2 line-clamp-2 group-hover:text-[${typeInfo.colors.primary}] transition text-lg`}>
+            {/* Content Section - Fixed height structure */}
+            <div className="p-5 flex flex-col flex-1">
+                {/* Title - Fixed height */}
+                <div className="mb-3 min-h-[60px] flex items-start">
+                    <h3 className="text-gray-800 font-semibold line-clamp-2 group-hover:text-[#9a6a63] transition text-lg leading-tight">
                         {product.name}
                     </h3>
                 </div>
 
-                {/* Type-specific details */}
-                {getProductDetails()}
+                {/* Type-specific details - Fixed height */}
+                <div className="min-h-[100px]">
+                    {getProductDetails()}
+                </div>
 
-                {/* Rating */}
-                <div className="flex items-center gap-2 mb-3">
+                {/* Rating - Fixed height */}
+                <div className="flex items-center gap-2 mb-3 min-h-[20px]">
                     <StarRating rating={averageRating} />
                     <span className="text-sm text-gray-600">
                         ({product.reviews?.length || 0})
                     </span>
                 </div>
 
-                {/* Price and Add to Cart */}
-                <div className="flex items-center justify-between">
+                {/* Price and Add to Cart - Push to bottom */}
+                <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-2">
-                        <p className={`text-[${typeInfo.colors.primary}] font-bold text-lg`}>
+                        <p className="text-[#9a6a63] font-bold text-lg">
                             €{finalPrice.toFixed(2)}
                         </p>
                         {product.discount > 0 && (
@@ -430,14 +497,53 @@ export default function ProductCard({
                     </div>
                     <button
                         onClick={handleAddToCart}
-                        disabled={product.stock === 0}
-                        className="px-4 py-2 text-white rounded-xl transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 z-10 relative"
-                        style={{ background: `linear-gradient(135deg, ${typeInfo.colors.primary} 0%, ${typeInfo.colors.secondary} 100%)` }}
+                        disabled={currentStock === 0 || isAddingToCart || isUpdatingStock}
+                        className={`px-4 py-2 text-white rounded-xl transition-all transform shadow-lg flex items-center gap-2 z-10 relative font-medium ${currentStock === 0
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : isAddingToCart || isUpdatingStock
+                                    ? 'bg-gray-500 cursor-wait'
+                                    : 'hover:scale-105 hover:shadow-xl'
+                            }`}
+                        style={currentStock > 0 && !isAddingToCart && !isUpdatingStock ?
+                            { background: `linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)` } : {}}
                     >
-                        <ShoppingCart size={16} /> Add
+                        {isAddingToCart || isUpdatingStock ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                Adding...
+                            </>
+                        ) : currentStock === 0 ? (
+                            <>
+                                <AlertCircle size={16} />
+                                Sold Out
+                            </>
+                        ) : (
+                            <>
+                                <ShoppingCart size={16} />
+                                Add
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
         </div>
     );
 }
+
+// Error toast utility
+const showErrorToast = (message: string) => {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all transform translate-x-0';
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+};
