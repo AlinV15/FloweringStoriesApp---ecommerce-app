@@ -7,6 +7,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-05-28.basil"
 });
 
+// Funcție pentru trimiterea email-ului de confirmare
+async function sendOrderConfirmationEmail(orderId: string) {
+    try {
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+
+        const response = await fetch(`${baseUrl}/api/send-order-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ orderId }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log('✅ Order confirmation email sent via webhook for order:', orderId);
+            return true;
+        } else {
+            console.error('❌ Failed to send email via webhook:', data.message);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error sending email via webhook:', error);
+        return false;
+    }
+}
+
 export async function POST(req: NextRequest) {
     const rawBody = await req.arrayBuffer();
     const bodyBuffer = Buffer.from(rawBody);
@@ -40,15 +68,51 @@ export async function POST(req: NextRequest) {
         if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
             const orderId = session.metadata?.orderId;
-            console.log(orderId)
+            console.log('📦 Processing completed checkout session for order:', orderId);
 
             if (orderId) {
-                await Order.findByIdAndUpdate(orderId, {
-                    status: "pending", // confirmed și trimis la procesare
-                    "payment.status": "succeeded",
-                    "payment.stripePaymentIntentId": session.payment_intent as string
+                // Actualizează statusul comenzii conform structurii tale
+                const updatedOrder = await Order.findByIdAndUpdate(
+                    orderId,
+                    {
+                        status: "pending", // Păstrează pending conform enum-ului tău
+                        "payment.status": "succeeded",
+                        "payment.stripePaymentIntentId": session.payment_intent as string,
+                        "payment.amount": session.amount_total ? session.amount_total / 100 : 0, // Convertește din cents
+                        "payment.currency": session.currency || 'eur'
+                    },
+                    { new: true }
+                );
+
+                if (updatedOrder) {
+                    console.log(`✅ Order ${orderId} payment confirmed and status updated`);
+
+                    // Trimite email-ul de confirmare automat
+                    const emailSent = await sendOrderConfirmationEmail(orderId);
+
+                    if (emailSent) {
+                        console.log(`📧 Confirmation email sent for order ${orderId}`);
+                    } else {
+                        console.log(`⚠️ Email sending failed for order ${orderId}, but order was processed successfully`);
+                    }
+                } else {
+                    console.error(`❌ Could not find or update order ${orderId}`);
+                }
+            } else {
+                console.error('❌ No orderId found in session metadata');
+            }
+        }
+
+        // Handle other webhook events if needed
+        if (event.type === "payment_intent.payment_failed") {
+            const paymentIntent = event.data.object as Stripe.PaymentIntent;
+            console.log('❌ Payment failed for payment intent:', paymentIntent.id);
+
+            // Marchează comanda ca eșuată
+            if (paymentIntent.metadata?.orderId) {
+                await Order.findByIdAndUpdate(paymentIntent.metadata.orderId, {
+                    "payment.status": "failed"
                 });
-                console.log(`Order ${orderId} payment confirmed`);
             }
         }
 

@@ -20,6 +20,24 @@ const OrderSchema = new mongoose.Schema({
     },
     method: String
   },
+  // ✅ Tracking pentru email-uri
+  email: {
+    confirmationSent: {
+      type: Boolean,
+      default: false
+    },
+    confirmationSentAt: Date,
+    shippingNotificationSent: {
+      type: Boolean,
+      default: false
+    },
+    shippingNotificationSentAt: Date,
+    deliveryNotificationSent: {
+      type: Boolean,
+      default: false
+    },
+    deliveryNotificationSentAt: Date
+  },
   status: {
     type: String,
     enum: ['pending', 'shipped', 'delivered'],

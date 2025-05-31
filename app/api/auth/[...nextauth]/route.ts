@@ -1,3 +1,4 @@
+// /app/api/auth/[...nextauth]/route.ts - CONFIGURAȚIE MINIMALĂ PENTRU TESTARE
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
@@ -6,7 +7,7 @@ import bcrypt from "bcrypt";
 import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import type { NextAuthOptions } from "next-auth";
-import crypto from "crypto"
+import crypto from "crypto";
 
 interface TokenWithId {
     id: string;
@@ -26,6 +27,7 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            // ✅ FĂRĂ scope-uri suplimentare - doar cele de bază
         }),
         FacebookProvider({
             clientId: process.env.FACEBOOK_CLIENT_ID!,
@@ -84,6 +86,9 @@ export const authOptions: NextAuthOptions = {
                 const existingUser = await User.findOne({ email: user.email });
 
                 if (!existingUser) {
+                    console.log('🔍 Google Profile Data:', profile);
+
+                    // ✅ Doar datele de bază de la Google
                     const firstName = (profile as any)?.given_name || user.name?.split(" ")[0] || "";
                     const lastName = (profile as any)?.family_name || user.name?.split(" ").slice(1).join(" ") || "";
 
@@ -96,10 +101,43 @@ export const authOptions: NextAuthOptions = {
                         firstName,
                         lastName,
                         password: hashedPassword,
-                        role: "user", // Default role
-                        // birthDate and genre are optional, so they can be null/undefined initially
-                        // favoriteProducts, orders, and address arrays/refs are empty by default
+                        role: "user",
+                        // ✅ Setează valorile default pentru câmpurile noi
+                        birthDate: null,
+                        genre: "",
+                        phone: "",
+                        newsletter: false,
+                        emailVerified: true,
+                        isActive: true
                     });
+
+                    console.log('✅ User created successfully');
+                } else {
+                    console.log('👤 Existing user found, logging in');
+
+                    // ✅ Migrație pentru utilizatori existenți
+                    const updateFields: any = {};
+
+                    if (existingUser.emailVerified === undefined) {
+                        updateFields.emailVerified = true;
+                    }
+                    if (existingUser.isActive === undefined) {
+                        updateFields.isActive = true;
+                    }
+                    if (existingUser.phone === undefined) {
+                        updateFields.phone = "";
+                    }
+                    if (existingUser.newsletter === undefined) {
+                        updateFields.newsletter = false;
+                    }
+                    if (existingUser.genre === undefined) {
+                        updateFields.genre = "";
+                    }
+
+                    if (Object.keys(updateFields).length > 0) {
+                        await User.findByIdAndUpdate(existingUser._id, updateFields);
+                        console.log('✅ Updated existing user with missing fields');
+                    }
                 }
             }
 
@@ -112,7 +150,6 @@ export const authOptions: NextAuthOptions = {
                 token.role = user.role;
             }
 
-            // If token.role is missing (e.g., on refresh), fetch it from DB
             if (!token.role && token.email) {
                 await connectToDatabase();
                 const dbUser = await User.findOne({ email: token.email });

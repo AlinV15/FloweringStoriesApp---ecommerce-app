@@ -1,10 +1,9 @@
-// /api/auth/forgot-password/route.ts
+// /app/api/auth/forgot-password/route.ts - VERSIUNEA FINALĂ
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import bcrypt from "bcrypt";
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,7 +13,16 @@ export async function POST(request: NextRequest) {
 
         if (!email) {
             return NextResponse.json(
-                { message: 'Email is required' },
+                { success: false, message: 'Email is required' },
+                { status: 400 }
+            );
+        }
+
+        // Validare email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json(
+                { success: false, message: 'Please enter a valid email address' },
                 { status: 400 }
             );
         }
@@ -25,7 +33,7 @@ export async function POST(request: NextRequest) {
         if (!user) {
             // Nu dezvălui că user-ul nu există (securitate)
             return NextResponse.json(
-                { message: 'If an account with that email exists, we sent you a reset link.' },
+                { success: true, message: 'If an account with that email exists, we sent you a reset link.' },
                 { status: 200 }
             );
         }
@@ -37,21 +45,30 @@ export async function POST(request: NextRequest) {
         // Salvează token-ul în DB
         await User.findByIdAndUpdate(user._id, {
             resetPasswordToken: resetToken,
-            resetPasswordExpires: resetTokenExpiry
+            resetPasswordExpires: resetTokenExpiry,
+            updatedAt: new Date()
         });
 
         // Trimite email
-        await sendResetEmail(email, resetToken);
+        try {
+            await sendResetEmail(email, resetToken);
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            return NextResponse.json(
+                { success: false, message: 'Failed to send reset email. Please try again.' },
+                { status: 500 }
+            );
+        }
 
         return NextResponse.json(
-            { message: 'Password reset email sent successfully' },
+            { success: true, message: 'Password reset email sent successfully' },
             { status: 200 }
         );
 
     } catch (error) {
         console.error('Forgot password error:', error);
         return NextResponse.json(
-            { message: 'An error occurred. Please try again.' },
+            { success: false, message: 'An error occurred. Please try again.' },
             { status: 500 }
         );
     }
@@ -59,7 +76,6 @@ export async function POST(request: NextRequest) {
 
 // Funcție pentru trimiterea email-ului
 async function sendResetEmail(email: string, token: string) {
-    // Configurează transportul pentru email
     const transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
         port: 587,
@@ -142,62 +158,4 @@ async function sendResetEmail(email: string, token: string) {
     };
 
     await transporter.sendMail(mailOptions);
-}
-
-// /api/auth/reset-password/route.ts
-export async function PUT(request: NextRequest) {
-    try {
-        await connectToDatabase();
-
-        const { token, password } = await request.json();
-
-        if (!token || !password) {
-            return NextResponse.json(
-                { message: 'Token and password are required' },
-                { status: 400 }
-            );
-        }
-
-        if (password.length < 6) {
-            return NextResponse.json(
-                { message: 'Password must be at least 6 characters long' },
-                { status: 400 }
-            );
-        }
-
-        // Găsește user-ul cu token-ul valid
-        const user = await User.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: new Date() }
-        });
-
-        if (!user) {
-            return NextResponse.json(
-                { message: 'Invalid or expired reset token' },
-                { status: 400 }
-            );
-        }
-
-        // Hash password-ul nou
-        const hashedPassword = await bcrypt.hash(password, 12);
-
-        // Actualizează password-ul și șterge token-ul
-        await User.findByIdAndUpdate(user._id, {
-            password: hashedPassword,
-            resetPasswordToken: undefined,
-            resetPasswordExpires: undefined
-        });
-
-        return NextResponse.json(
-            { message: 'Password reset successfully' },
-            { status: 200 }
-        );
-
-    } catch (error) {
-        console.error('Reset password error:', error);
-        return NextResponse.json(
-            { message: 'An error occurred. Please try again.' },
-            { status: 500 }
-        );
-    }
 }

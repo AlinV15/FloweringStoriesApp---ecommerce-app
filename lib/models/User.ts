@@ -34,6 +34,15 @@ const UserSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   emailVerified: { type: Boolean, default: false },
 
+  resetPasswordToken: {
+    type: String,
+    required: false
+  },
+  resetPasswordExpires: {
+    type: Date,
+    required: false
+  },
+
 }, { timestamps: true });
 
 // Index for better performance

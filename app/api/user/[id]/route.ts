@@ -17,8 +17,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     await connectToDatabase();
-
-    const id = await params.id
+    const prms = await params
+    const id = await prms.id
     const user = await User.findById(id).select("-password");
     if (!user) return NextResponse.json({ error: "Utilizatorul nu există" }, { status: 404 });
 
@@ -35,7 +35,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     await connectToDatabase();
-    const id = await params.id
+    const prms = await params
+    const id = await prms.id
     const body = await req.json();
     const updateUserSchema = z.object({
         firstName: z.string().optional(),
@@ -69,7 +70,8 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     }
 
     await connectToDatabase();
-    const id = await params.id
+    const prms = await params
+    const id = await prms.id
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {

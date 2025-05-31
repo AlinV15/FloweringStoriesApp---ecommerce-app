@@ -5,6 +5,7 @@ import ClientLayout from "./components/ClientLayout";
 import { Playfair_Display, Nunito } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { MaintenanceWrapper } from "./components/MaintenanceWrapper";
+import { useUserCart } from "./hooks/useUserCart";
 
 const playfair = Playfair_Display({
   variable: "--font-heading",
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
     icon: "/flowering_stories_logo.png",
   },
 };
+
 
 export default function RootLayout({
   children,
