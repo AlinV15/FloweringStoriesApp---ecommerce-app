@@ -5,7 +5,8 @@ import ClientLayout from "./components/ClientLayout";
 import { Playfair_Display, Nunito } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { MaintenanceWrapper } from "./components/MaintenanceWrapper";
-import { useUserCart } from "./hooks/useUserCart";
+import { Analytics } from '@vercel/analytics/react';
+
 
 const playfair = Playfair_Display({
   variable: "--font-heading",
@@ -38,6 +39,7 @@ export default function RootLayout({
         <ClientLayout>
           <MaintenanceWrapper>
             {children}
+            <Analytics />
             <Toaster position="top-right" reverseOrder={false} />
           </MaintenanceWrapper>
         </ClientLayout>

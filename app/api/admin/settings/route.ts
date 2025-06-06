@@ -3,7 +3,7 @@ import ShopSettings from '@/lib/models/ShopSettings';
 import connectToDatabase from '@/lib/mongodb';
 import { shopSettingsSchema } from '@/lib/validators';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
     try {

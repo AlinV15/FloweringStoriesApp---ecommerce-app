@@ -1,13 +1,13 @@
 // app/api/subcategory/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Subcategory from "@/lib/models/Subcategory";
 import { subcategorySchema } from "@/lib/validators";
 
 // PATCH /api/subcategory/[id]
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session || (session.user as any).role !== "admin") {
         return NextResponse.json({ error: "Doar adminii pot modifica" }, { status: 403 });
@@ -18,7 +18,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!parsed.success) {
         return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const id = await params.id;
+    const prms = await params;
+    const id = prms.id
     await connectToDatabase();
     const updated = await Subcategory.findByIdAndUpdate(id, parsed.data, { new: true });
     if (!updated) {
@@ -29,9 +30,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/subcategory/[id]
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
-    const id = await params.id;
+    const prms = await params;
+    const id = prms.id
     if (!session || (session.user as any).role !== "admin") {
         return NextResponse.json({ error: "Doar adminii pot șterge" }, { status: 403 });
     }

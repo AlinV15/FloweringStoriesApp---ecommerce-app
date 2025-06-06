@@ -12,7 +12,6 @@ import {
     LayoutDashboard,
     ChevronDown,
     CircleArrowLeft,
-    BarChart3,
     Users
 } from 'lucide-react';
 

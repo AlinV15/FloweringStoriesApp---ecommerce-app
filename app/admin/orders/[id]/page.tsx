@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit3, Package, CreditCard, Truck, User, Mail, MapPin, Phone, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Edit3, Package, CreditCard, Truck, User, Mail, MapPin, Calendar, FileText } from 'lucide-react';
 import { useShopSettings } from '@/contexts/ShopSettingsContext';
 import { useCurrency } from '@/app/hooks/useCurrency';
 
@@ -69,7 +69,7 @@ const OrderViewPage = () => {
     const { formatPrice } = useCurrency();
 
     const primaryColor = settings?.colors?.primary || '#9c6b63';
-    const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
+    //  const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
     const accentColor = settings?.colors?.accent || '#fdf4f1';
 
     useEffect(() => {

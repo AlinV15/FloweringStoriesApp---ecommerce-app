@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
-import { Eye, EyeOff } from 'lucide-react';
+
 
 export default function LoginPage() {
     const router = useRouter();

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 // api/product/[id]/release-stock/route.ts - Release stock API
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const prms = await params

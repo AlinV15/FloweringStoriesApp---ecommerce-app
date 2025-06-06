@@ -2,7 +2,6 @@
 // app/api/product/route.ts
 
 import { NextResponse } from "next/server";
-import mongoose from 'mongoose';
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/Product";
 import Book from "@/lib/models/Book";
@@ -12,19 +11,29 @@ import Review from "@/lib/models/Review";
 import Subcategory from "@/lib/models/Subcategory";
 import User from "@/lib/models/User";
 
+// În /app/api/product/route.ts - adaugă debug pentru a vedea problema cu refId
+
 export async function GET() {
     try {
         await connectToDatabase();
 
-        //console.log('Registered models:', mongoose.modelNames());
-
-        // TEMPORARY SOLUTION: Fetch without populate
         const products = await Product.find();
 
+        console.log('=== DEBUGGING MAIN API REFID ISSUE ===');
+        console.log(`Found ${products.length} products`);
+
         const populatedProducts = await Promise.all(products.map(async (product) => {
-            let detailedProduct = null;
-            let subcategories = [];
-            let reviews = [];
+            let detailedProduct: any = null;
+            let subcategories: any[] = [];
+            let reviews: any[] = [];
+
+            // DEBUGGING: Verifică structura product
+            console.log(`\n🔍 Processing product: ${product.name}`);
+            console.log(`  Product._id: ${product._id}`);
+            console.log(`  Product.refId: ${product.refId}`);
+            console.log(`  Product.type: ${product.type}`);
+            console.log(`  Product.typeRef: ${product.typeRef}`);
+            console.log(`  refId === _id?: ${product.refId?.toString() === product._id?.toString()}`);
 
             // Fetch subcategories manually
             if (product.subcategories && product.subcategories.length > 0) {
@@ -40,26 +49,61 @@ export async function GET() {
             // Fetch product details based on type
             try {
                 if (product.typeRef === 'Book') {
+                    console.log(`  🔎 Searching for Book with refId: ${product.refId}`);
                     detailedProduct = await Book.findById(product.refId);
+
+                    if (detailedProduct) {
+                        console.log(`  ✅ Found Book: ${detailedProduct.author} - "${detailedProduct.isbn}"`);
+                        console.log(`     Book._id: ${detailedProduct._id}`);
+                    } else {
+                        console.log(`  ❌ Book NOT FOUND with refId: ${product.refId}`);
+
+                        // DEBUGGING: Încearcă să găsești Book-ul cu product._id
+                        const bookWithProductId = await Book.findById(product._id);
+                        if (bookWithProductId) {
+                            console.log(`  🚨 FOUND Book using Product._id instead of refId!`);
+                            console.log(`     This means refId is incorrect in database`);
+                            console.log(`     Book found: ${bookWithProductId.author}`);
+                        }
+
+                        // DEBUGGING: Arată ce Book-uri există
+                        const allBooks = await Book.find({}).limit(3);
+                        console.log(`  📚 Sample Books in database:`, allBooks.map(b => ({
+                            _id: b._id,
+                            author: b.author
+                        })));
+                    }
                 } else if (product.typeRef === 'Stationary') {
+                    console.log(`  🔎 Searching for Stationary with refId: ${product.refId}`);
                     detailedProduct = await Stationary.findById(product.refId);
+
+                    if (detailedProduct) {
+                        console.log(`  ✅ Found Stationary: ${detailedProduct.brand} ${detailedProduct.type}`);
+                    } else {
+                        console.log(`  ❌ Stationary NOT FOUND with refId: ${product.refId}`);
+                    }
                 } else if (product.typeRef === 'Flower') {
+                    console.log(`  🔎 Searching for Flower with refId: ${product.refId}`);
                     detailedProduct = await Flower.findById(product.refId);
+
+                    if (detailedProduct) {
+                        console.log(`  ✅ Found Flower: ${detailedProduct.color}`);
+                    } else {
+                        console.log(`  ❌ Flower NOT FOUND with refId: ${product.refId}`);
+                    }
                 }
             } catch (detailError) {
-                console.error(`Error fetching details for product ${product._id}:`, detailError);
+                console.error(`❌ Error fetching details for product ${product._id}:`, detailError);
             }
 
-            // Fetch product reviews manually (same strategy as subcategories)
+            // Fetch product reviews manually (păstrat cum era)
             try {
                 const productReviews = await Review.find({ product: product._id }).sort({ createdAt: -1 });
 
-                // Fetch user details for each review manually
                 const reviewsWithUsers = await Promise.all(productReviews.map(async (review) => {
-                    let userData = null;
+                    let userData: any = null;
 
                     try {
-                        // Fetch user data manually using userId
                         if (review.userId) {
                             userData = await User.findById(review.userId).select('firstName lastName email');
                         }
@@ -90,15 +134,26 @@ export async function GET() {
                 : 0;
 
             const productObject = product.toObject();
-            return {
+            const result = {
                 ...productObject,
-                subcategories: subcategories, // Add subcategories manually
+                subcategories: subcategories,
                 details: detailedProduct ? detailedProduct.toObject() : null,
-                reviews: reviews, // Add reviews with user details manually
-                averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+                reviews: reviews,
+                averageRating: Math.round(averageRating * 10) / 10,
                 reviewCount: reviews.length
             };
+
+            console.log(`  📦 Final product structure:`, {
+                _id: result._id,
+                refId: result.refId,
+                hasDetails: !!result.details,
+                detailsType: result.details ? 'found' : 'missing'
+            });
+
+            return result;
         }));
+
+        console.log('=== END DEBUGGING MAIN API ===');
 
         return NextResponse.json({
             products: populatedProducts,
@@ -112,18 +167,46 @@ export async function GET() {
         }, { status: 500 });
     }
 }
-// Pentru debugging, poți adăuga și această rută POST temporară
+
+// BONUS: Adaugă și o rută de debug pentru a verifica rapid datele
 export async function POST() {
     try {
         await connectToDatabase();
 
-        // Verifică ce modele sunt înregistrate
-        const registeredModels = mongoose.modelNames();
+        // Quick data check
+        const products = await Product.find({}).limit(3);
+        const books = await Book.find({}).limit(3);
+        const flowers = await Flower.find({}).limit(3);
+        const stationaries = await Stationary.find({}).limit(3);
+
+        console.log('=== QUICK DATA STRUCTURE CHECK ===');
 
         return NextResponse.json({
-            message: "Debug info",
-            registeredModels: registeredModels,
-            hasSubcategory: registeredModels.includes('Subcategory')
+            message: "Debug data structure",
+            sampleData: {
+                products: products.map(p => ({
+                    _id: p._id,
+                    name: p.name,
+                    refId: p.refId,
+                    type: p.type,
+                    typeRef: p.typeRef,
+                    refIdEqualsId: p.refId?.toString() === p._id?.toString()
+                })),
+                books: books.map(b => ({
+                    _id: b._id,
+                    author: b.author,
+                    isbn: b.isbn
+                })),
+                flowers: flowers.map(f => ({
+                    _id: f._id,
+                    color: f.color
+                })),
+                stationaries: stationaries.map(s => ({
+                    _id: s._id,
+                    brand: s.brand,
+                    type: s.type
+                }))
+            }
         });
     } catch (err) {
         return NextResponse.json({

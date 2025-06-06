@@ -52,7 +52,7 @@ const OrderEditPage = () => {
     const { formatPrice } = useCurrency();
 
     const primaryColor = settings?.colors?.primary || '#9c6b63';
-    const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
+    //const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
     const accentColor = settings?.colors?.accent || '#fdf4f1';
 
     useEffect(() => {

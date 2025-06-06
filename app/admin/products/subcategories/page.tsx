@@ -10,7 +10,7 @@ import { Subcategory } from '@/app/types';
 import { useShopSettings } from '@/contexts/ShopSettingsContext';
 
 export default function CategoriesPage() {
-    const { subcategories, loading, error, fetchSubcategories, setSubcategories } = useSubcategoryStore();
+    const { subcategories, loading, error, fetchSubcategories } = useSubcategoryStore();
     const [showFormModal, setShowFormModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [editData, setEditData] = useState<Subcategory | null>(null);
@@ -23,7 +23,7 @@ export default function CategoriesPage() {
 
     // Get colors from settings
     const primaryColor = settings?.colors?.primary || '#9c6b63';
-    const secondaryColor = settings?.colors?.secondary || '#c1a5a2';
+    //const secondaryColor = settings?.colors?.secondary || '#c1a5a2';
     const accentColor = settings?.colors?.accent || '#f6eeec';
 
     useEffect(() => {
@@ -187,8 +187,8 @@ export default function CategoriesPage() {
                                     key={type}
                                     onClick={() => setFilterType(type)}
                                     className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${filterType === type
-                                            ? 'text-white shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                        ? 'text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                         } ${type === 'all' ? 'rounded-l-lg' : ''} ${type === 'flower' ? 'rounded-r-lg' : ''}`}
                                     style={{
                                         backgroundColor: filterType === type ? primaryColor : 'transparent'
@@ -205,8 +205,8 @@ export default function CategoriesPage() {
                         <button
                             onClick={() => setViewMode('grid')}
                             className={`p-2 transition-all duration-200 rounded-l-lg ${viewMode === 'grid'
-                                    ? 'text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                ? 'text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                 }`}
                             style={{
                                 backgroundColor: viewMode === 'grid' ? primaryColor : 'transparent'
@@ -217,8 +217,8 @@ export default function CategoriesPage() {
                         <button
                             onClick={() => setViewMode('list')}
                             className={`p-2 transition-all duration-200 rounded-r-lg ${viewMode === 'list'
-                                    ? 'text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                ? 'text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                 }`}
                             style={{
                                 backgroundColor: viewMode === 'list' ? primaryColor : 'transparent'

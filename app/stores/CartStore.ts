@@ -1,8 +1,7 @@
 // stores/cartStore.ts - User-specific cart management
-import React from 'react';
+
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { useSession } from 'next-auth/react';
+
 import { showToast } from '../hooks/useUserCart';
 
 export interface CartItem {

@@ -37,7 +37,6 @@ const FilterSection = memo(({
     title,
     icon,
     children,
-    collapsible = false
 }: {
     title: string;
     icon: React.ReactNode;
@@ -147,8 +146,8 @@ const ColorPicker = memo(({
             <button
                 onClick={() => onColorChange('all')}
                 className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${selectedColor === 'all'
-                        ? 'border-[#9c6b63] ring-2 ring-[#9c6b63]/20'
-                        : 'border-gray-300 hover:border-[#9c6b63]/50'
+                    ? 'border-[#9c6b63] ring-2 ring-[#9c6b63]/20'
+                    : 'border-gray-300 hover:border-[#9c6b63]/50'
                     }`}
                 style={{ background: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)', backgroundSize: '8px 8px', backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px' }}
                 title="All Colors"
@@ -161,8 +160,8 @@ const ColorPicker = memo(({
                     key={color}
                     onClick={() => onColorChange(color)}
                     className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${selectedColor === color
-                            ? 'border-[#9c6b63] ring-2 ring-[#9c6b63]/20 scale-110'
-                            : 'border-white shadow-md hover:border-[#9c6b63]/50'
+                        ? 'border-[#9c6b63] ring-2 ring-[#9c6b63]/20 scale-110'
+                        : 'border-white shadow-md hover:border-[#9c6b63]/50'
                         }`}
                     style={{ backgroundColor: color.toLowerCase() }}
                     title={color}

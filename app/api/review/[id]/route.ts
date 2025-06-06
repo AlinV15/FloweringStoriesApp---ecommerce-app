@@ -1,16 +1,16 @@
 // app/api/review/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Review from "@/lib/models/Review";
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
-
+    const { id } = await params;
     await connectToDatabase();
-    const review = await Review.findById(params.id);
+    const review = await Review.findById(id);
 
     if (!review) {
         return NextResponse.json({ error: "Recenzie inexistentă" }, { status: 404 });
@@ -23,7 +23,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
         return NextResponse.json({ error: "Nu ai permisiune" }, { status: 403 });
     }
 
-    await Review.findByIdAndDelete(params.id);
+    await Review.findByIdAndDelete(id);
 
     return NextResponse.json({ message: "Recenzie ștearsă" });
 }

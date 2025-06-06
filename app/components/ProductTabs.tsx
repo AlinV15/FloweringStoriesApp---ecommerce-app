@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Info, Edit3, Send, Star, User, LogIn } from 'lucide-react';
+import { Info, Edit3, Send, Star, LogIn } from 'lucide-react';
 
 interface ProductTabsProps {
     product: {
@@ -17,7 +17,7 @@ interface ProductTabsProps {
 
 export default function ProductTabs({ product, productDetails, reviewSection }: ProductTabsProps) {
     const [activeTab, setActiveTab] = useState('details');
-    const { data: session, status } = useSession();
+    const { data: session } = useSession();
     const router = useRouter();
 
     // Review form state

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon, AlertCircle, Check, AlertTriangle, Camera } from 'lucide-react';
+import { X, Loader2, Image as ImageIcon, AlertCircle, Check, AlertTriangle, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {

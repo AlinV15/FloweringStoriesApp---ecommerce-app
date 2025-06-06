@@ -7,7 +7,7 @@ import User from "@/lib/models/User";
 import { orderSchema, orderItemSchema } from "@/lib/validators";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 import Address from "@/lib/models/Address";
 
 export async function POST(req: NextRequest) {
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Creează address doar dacă e courier
-        let savedAddress = null;
+        let savedAddress: any = null;
         if (orderData.deliveryMethod === 'courier' && address) {
             savedAddress = await Address.create({
                 street: address.street,
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
                 phone: customer.phone,
                 newsletter: customer.newsletter || false,
                 // Save the address as default if courier delivery
-                ...(savedAddress && { address: savedAddress._id })
+                ...(savedAddress !== null ? { address: (savedAddress as { _id: any })._id } : {})
             });
         }
 
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-export async function GET() {
+export async function GET(_: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 

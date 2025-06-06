@@ -15,7 +15,7 @@ export function useCurrency() {
         if (!settings) return `${amount}`;
 
         const currency = settings.currency;
-        const symbol = currencySymbols[currency];
+        // const symbol = currencySymbols[currency];
 
         return new Intl.NumberFormat('ro-RO', {
             style: 'currency',

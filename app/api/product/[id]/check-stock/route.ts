@@ -3,9 +3,8 @@ import connectToDatabase from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
 // api/product/[id]/check-stock/route.ts - Check current stock
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
+export async function GET(_: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const prms = await params

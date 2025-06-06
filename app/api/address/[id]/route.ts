@@ -1,18 +1,28 @@
 import Address from "@/lib/models/Address";
 import connectToDatabase from "@/lib/mongodb";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+// ✅ SOLUȚIA CORECTĂ - doar Promise, nu union type
+export async function PUT(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> } // ✅ Doar Promise
+) {
+    const { id } = await params; // ✅ Direct destructuring
+
     await connectToDatabase();
     const data = await request.json();
 
-    const updated = await Address.findByIdAndUpdate(params.id, data, { new: true });
+    const updated = await Address.findByIdAndUpdate(id, data, { new: true });
     return NextResponse.json(updated);
 }
 
-// DELETE /api/address/[id]
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+    _: Request,
+    { params }: { params: Promise<{ id: string }> } // ✅ Doar Promise
+) {
+    const { id } = await params; // ✅ Direct destructuring
+
     await connectToDatabase();
-    await Address.findByIdAndDelete(params.id);
+    await Address.findByIdAndDelete(id);
     return NextResponse.json({ message: 'Deleted successfully' });
 }

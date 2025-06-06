@@ -7,6 +7,7 @@ import { useProductStore } from '@/app/stores/ProductStore';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import ChevronUpDownIcon from '@heroicons/react/20/solid/ChevronUpDownIcon';
 
+
 // Define types for better type safety
 type ProductType = 'book' | 'flower' | 'stationary' | '';
 type FormMode = 'create' | 'edit';
@@ -127,85 +128,80 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
     };
 
     // Fetch product-specific data and populate form
+
     const populateData = async () => {
         if (!isEdit || !initialData) return;
 
         setIsInitializing(true);
         try {
-            let res;
-            let typeData = null;
-
-            console.log('Fetching initial data for product:', initialData.refId);
-
-            // Fetch type-specific data
-            switch (initialData?.type) {
-                case 'book':
-                    res = await fetch(`/api/product/book/${initialData?.refId}`);
-                    break;
-                case 'flower':
-                    res = await fetch(`/api/product/flower/${initialData?.refId}`);
-                    break;
-                case 'stationary':
-                    res = await fetch(`/api/product/stationary/${initialData?.refId}`);
-                    break;
-                default:
-                    throw new Error('Invalid product type');
+            // FORCE STORE LOAD FIRST - always ensure store is loaded
+            const store = useProductStore.getState();
+            if (!store.initialized || store.rawProducts.length === 0) {
+                await fetchProducts();
+                // Wait for store to be populated
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
 
-            if (res && res.ok) {
-                typeData = await res.json();
-                console.log('Fetched type data:', typeData);
-            }
-
-            // Populate main form fields
+            // Basic form data
             setForm({
                 name: initialData.name || '',
                 price: initialData.price?.toString() || '',
                 stock: initialData.stock?.toString() || '',
                 type: (initialData.type as ProductType) || '',
-                description: initialData.description || '',
+                description: initialData.Description || '',
                 image: initialData.image || '',
                 discount: initialData.discount?.toString() || '',
             });
 
-            // Populate type-specific fields with fetched data
-            if (typeData) {
-                switch (initialData.type) {
+            // Get product with details - try initialData first, then store
+            let productWithDetails: any | null = null;
+
+            if (initialData.details) {
+                productWithDetails = initialData;
+            } else {
+                const { getProductByIdWithRefresh } = useProductStore.getState();
+                productWithDetails = await getProductByIdWithRefresh(initialData._id);
+            }
+
+            // Populate type-specific fields
+            if (productWithDetails?.details) {
+                const details = productWithDetails.details;
+                const productType = (initialData.type || productWithDetails.type || productWithDetails.typeRef?.toLowerCase()) as ProductType;
+
+                switch (productType) {
                     case 'book':
                         setBookFields({
-                            author: typeData.author || '',
-                            pages: typeData.pages?.toString() || '',
-                            isbn: typeData.isbn || '',
-                            publisher: typeData.publisher || '',
-                            genre: typeData.genre || '',
-                            language: typeData.language || '',
-                            publicationDate: formatDateForInput(typeData.publicationDate),
+                            author: details.author || '',
+                            pages: details.pages?.toString() || '',
+                            isbn: details.isbn || '',
+                            publisher: details.publisher || '',
+                            genre: details.genre || '',
+                            language: details.language || '',
+                            publicationDate: formatDateForInput(details.publicationDate),
                         });
                         break;
 
                     case 'flower':
                         setFlowerFields({
-                            color: typeData.color || '',
-                            freshness: typeData.freshness?.toString() || '',
-                            lifespan: typeData.lifespan?.toString() || '',
-                            season: typeData.season || '',
-                            careInstructions: typeData.careInstructions || '',
-                            expiryDate: formatDateForInput(typeData.expiryDate),
+                            color: details.color || '',
+                            freshness: details.freshness?.toString() || '',
+                            lifespan: details.lifespan?.toString() || '',
+                            season: details.season || '',
+                            careInstructions: details.careInstructions || '',
+                            expiryDate: formatDateForInput(details.expiryDate),
                         });
                         break;
 
                     case 'stationary':
                         setStationaryFields({
-                            brand: typeData.brand || '',
-                            type: typeData.type || '',
-                            material: typeData.material || '',
-                            color: Array.isArray(typeData.color)
-                                ? typeData.color.join(', ')
-                                : typeData.color || '',
+                            brand: details.brand || '',
+                            type: details.type || '',
+                            material: details.material || '',
+                            color: Array.isArray(details.color) ? details.color.join(', ') : details.color || '',
                             dimensions: {
-                                height: typeData.dimensions?.height?.toString() || '',
-                                width: typeData.dimensions?.width?.toString() || '',
-                                depth: typeData.dimensions?.depth?.toString() || '',
+                                height: details.dimensions?.height?.toString() || '',
+                                width: details.dimensions?.width?.toString() || '',
+                                depth: details.dimensions?.depth?.toString() || '',
                             },
                         });
                         break;
@@ -213,8 +209,19 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
             }
 
         } catch (err) {
-            console.error('Error fetching product data:', err);
-            toast.error('Failed to fetch product details');
+            console.error('Error populating data:', err);
+            toast.error('Failed to load some product details');
+
+            // At minimum, populate basic form data
+            setForm({
+                name: initialData.name || '',
+                price: initialData.price?.toString() || '',
+                stock: initialData.stock?.toString() || '',
+                type: (initialData.type as ProductType) || '',
+                description: initialData.Description || '',
+                image: initialData.image || '',
+                discount: initialData.discount?.toString() || '',
+            });
         } finally {
             setIsInitializing(false);
         }
@@ -395,9 +402,7 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Full validation on submit
         if (!validateAllFields()) {
-            // Mark all relevant fields as touched to show errors
             const allFields = [
                 'name', 'price', 'stock', 'type', 'image',
                 ...(form.type === 'book' ? ['author', 'isbn', 'pages'] : []),
@@ -424,10 +429,47 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
             price: parseFloat(form.price),
             stock: parseInt(form.stock),
             discount: form.discount ? parseFloat(form.discount) : 0,
+            Description: form.description, // Asigură-te că folosești numele corect
         };
 
         let refData = {};
         let endpoint = '';
+
+        // PENTRU EDIT: Folosește refId din initialData sau găsește-l din store
+        let targetRefId = '';
+
+        if (isEdit) {
+            console.log('=== DETERMINING TARGET REF ID ===');
+
+            const { rawProducts } = useProductStore.getState();
+            const rawProduct = rawProducts.find(p => p._id === initialData._id);
+
+            console.log('rawProduct found:', !!rawProduct);
+            console.log('rawProduct details:', rawProduct ? {
+                _id: rawProduct._id,
+                refId: rawProduct.refId,
+                type: rawProduct.type,
+                name: rawProduct.name
+            } : 'NOT FOUND');
+
+            if (rawProduct?.refId) {
+                targetRefId = rawProduct.refId;
+                console.log('✅ Using refId from rawProduct:', targetRefId);
+            } else {
+                console.error('❌ No refId found in rawProduct');
+                console.log('Available rawProducts:', rawProducts.map(p => ({
+                    _id: p._id,
+                    refId: p.refId,
+                    name: p.name,
+                    type: p.type
+                })));
+                toast.error('Cannot find product reference ID for editing');
+                setIsLoading(false);
+                return;
+            }
+
+            console.log('=== END DETERMINING TARGET REF ID ===');
+        }
 
         switch (form.type) {
             case 'book':
@@ -439,12 +481,15 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
                         publisher: bookFields.publisher || undefined,
                         genre: bookFields.genre || undefined,
                         language: bookFields.language || undefined,
-                        publicationDate: bookFields.publicationDate || undefined,
+                        // FIXED: Properly handle date conversion
+                        publicationDate: bookFields.publicationDate ?
+                            new Date(bookFields.publicationDate).toISOString() : undefined,
                     },
                     product: productData,
                 };
-                endpoint = isEdit ? `/api/product/book/${initialData.refId}` : '/api/product/book';
+                endpoint = isEdit ? `/api/product/book/${targetRefId}` : '/api/product/book';
                 break;
+
             case 'flower':
                 refData = {
                     flower: {
@@ -453,19 +498,24 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
                         lifespan: parseInt(flowerFields.lifespan),
                         season: flowerFields.season || undefined,
                         careInstructions: flowerFields.careInstructions || undefined,
-                        expiryDate: flowerFields.expiryDate || undefined,
+                        // FIXED: Properly handle date conversion
+                        expiryDate: flowerFields.expiryDate ?
+                            new Date(flowerFields.expiryDate).toISOString() : undefined,
                     },
                     product: productData,
                 };
-                endpoint = isEdit ? `/api/product/flower/${initialData.refId}` : '/api/product/flower';
+                endpoint = isEdit ? `/api/product/flower/${targetRefId}` : '/api/product/flower';
                 break;
+
             case 'stationary':
                 refData = {
                     stationary: {
                         brand: stationaryFields.brand || undefined,
-                        color: stationaryFields.color.split(',').map((c) => c.trim()),
+                        // FIXED: Ensure color is always an array
+                        color: stationaryFields.color
+                            ? stationaryFields.color.split(',').map((c) => c.trim()).filter(Boolean)
+                            : [],
                         type: stationaryFields.type,
-                        price: productData.price,
                         dimensions: {
                             height: parseFloat(stationaryFields.dimensions.height),
                             width: parseFloat(stationaryFields.dimensions.width),
@@ -475,11 +525,15 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
                     },
                     product: productData,
                 };
-                endpoint = isEdit ? `/api/product/stationary/${initialData.refId}` : '/api/product/stationary';
+                endpoint = isEdit ? `/api/product/stationary/${targetRefId}` : '/api/product/stationary';
                 break;
         }
 
         try {
+            console.log('=== SUBMITTING TO API ===');
+            console.log('Endpoint:', endpoint);
+            console.log('Data:', refData);
+
             const res = await fetch(endpoint, {
                 method: isEdit ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -489,7 +543,7 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
             const result = await res.json();
 
             if (!res.ok) {
-                const errorDetails = result.errors ? JSON.stringify(result.errors, null, 2) : result.message;
+                const errorDetails = result.errors ? JSON.stringify(result.errors, null, 2) : result.message || result.error;
                 toast.error(`Error: ${errorDetails}`);
                 setIsLoading(false);
                 return;
@@ -497,13 +551,57 @@ const ProductFormModal = ({ mode, initialData, onClose }: Props) => {
 
             toast.success(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
 
-            // Refresh products list
+            // FIXED: Force complete refresh of the store
             try {
-                fetchProducts();
+                console.log('🔄 Forcing complete store refresh...');
+
+                // Get store instance
+                const store = useProductStore.getState();
+
+                // Clear current data to force fresh fetch
+                store.setProducts([]);
+
+                // Reset store state
+                useProductStore.setState({
+                    rawProducts: [],
+                    allProducts: [],
+                    products: [],
+                    filteredProducts: [],
+                    initialized: false,
+                    loading: false,
+                    error: null
+                });
+
+                // Wait a moment for state to clear
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Force fresh fetch with cache busting
+                await fetch('/api/product', {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                    }
+                }).then(async (response) => {
+                    if (response.ok) {
+                        // Trigger store refresh
+                        await fetchProducts();
+
+                        // Ensure filters are reapplied
+                        setTimeout(() => {
+                            store.applyFilters();
+                        }, 100);
+                    }
+                });
+
+                console.log('✅ Store refresh completed');
+
+                // Close modal after successful refresh
                 onClose();
+
             } catch (fetchError) {
-                console.error('Error fetching updated products:', fetchError);
+                console.error('Error refreshing products:', fetchError);
                 toast.error('Product was saved but there was an error refreshing the product list');
+                // Still close the modal since the save was successful
                 onClose();
             }
         } catch (err: any) {

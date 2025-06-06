@@ -5,7 +5,7 @@ import ShopSettings from '@/lib/models/ShopSettings';
 import connectToDatabase from '@/lib/mongodb';
 
 import { shopSettingsSchema } from '@/lib/validators/shoppingSettingsSchema';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
     try {

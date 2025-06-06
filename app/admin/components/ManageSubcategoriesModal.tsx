@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Check, Loader2, Search, X, Image as ImageIcon } from 'lucide-react';
+import { Check, Search, X, Image as ImageIcon } from 'lucide-react';
 import useSubcategoryStore from '@/app/stores/SubcategoryStore';
 
 interface Subcategory {
@@ -82,8 +82,10 @@ export default function ManageSubcategoriesModal({
                 const errorData = await res.json();
                 throw new Error(errorData.error || 'Failed to update subcategories');
             }
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to update subcategories', {
+        } catch (error) {
+
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred while deleting';
+            toast.error(errorMessage, {
                 duration: 4000,
                 style: {
                     background: '#ef4444',

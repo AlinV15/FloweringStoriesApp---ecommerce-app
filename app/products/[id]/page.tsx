@@ -437,9 +437,9 @@ function SimilarProducts({ products }: { products: Product[] }) {
 }
 
 // Main Server Component
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-    const paramss = await params;
-    const product = await getProduct(paramss.id);
+export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params; // ✅ Await params și destructuring
+    const product = await getProduct(id);
 
     if (!product) {
         return (

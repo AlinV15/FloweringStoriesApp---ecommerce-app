@@ -10,7 +10,6 @@ import {
     Pencil,
     Search,
     Star,
-    Package,
     Palette,
     Ruler,
     Filter,
@@ -20,14 +19,13 @@ import {
     DollarSign,
     RotateCcw,
     X,
-    TrendingUp,
-    Sparkles,
-    Clock,
     PackageOpen
 } from 'lucide-react';
 
 import { useProductStore } from '@/app/stores/ProductStore';
 import { isStationaryProduct, Product, StationaryProduct } from '@/app/types/product';
+
+
 
 // Lazy load components
 const ProductCard = lazy(() => import("@/app/components/ProductCard"));
@@ -806,7 +804,7 @@ export default function StationeryPage() {
     // Pagination helper
     const getPaginationNumbers = useCallback(() => {
         const maxVisiblePages = 5;
-        const pages = [];
+        const pages: number[] = [];
 
         if (totalPages <= maxVisiblePages) {
             for (let i = 1; i <= totalPages; i++) {

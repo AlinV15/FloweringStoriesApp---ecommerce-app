@@ -6,7 +6,7 @@ export { orderItemSchema } from "./orderItemSchema";
 export { reviewSchema } from "./reviewSchema";
 export { stationarySchema } from "./stationarySchema";
 export { subcategorySchema } from "./subcategorySchema";
-export { userSchema } from "./userSchema";
+export { userUpdateSchema } from "./userSchema";
 export { addressSchema } from "./addressSchema";
 export { productSchema } from "./productSchema";
 export { orderSchema } from "./orderSchema";

@@ -1,12 +1,12 @@
 // api/product/[id]/reserve-stock/route.ts - Reserve stock API
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
+
 import Product from '@/lib/models/Product';
 import connectToDatabase from '@/lib/mongodb';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const prms = await params

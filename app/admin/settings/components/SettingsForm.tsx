@@ -43,7 +43,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ mode, onSuccess, onCancel }
         setFaviconPreview,
         setLogoPreview,
         setBusinessHours,
-        loadSettings,
         saveSettings,
         resetForm,
         setError,

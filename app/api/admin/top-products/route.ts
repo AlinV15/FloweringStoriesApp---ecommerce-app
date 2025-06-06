@@ -1,11 +1,9 @@
 // app/api/admin/top-products/route.ts
 import connectToDatabase from '@/lib/mongodb'
-import Order from '@/lib/models/Order'
 import OrderItem from '@/lib/models/OrderItem'
-import Product from '@/lib/models/Product'
 import { NextResponse } from 'next/server'
 import { getServerSession } from "next-auth"
-import { authOptions } from "../../auth/[...nextauth]/route"
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
     try {

@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 export const useUserCart = () => {
     const { data: session, status } = useSession();
     const setCurrentUser = useCartStore(state => state.setCurrentUser);
-    const loadUserCart = useCartStore(state => state.loadUserCart);
+    //const loadUserCart = useCartStore(state => state.loadUserCart);
 
     React.useEffect(() => {
         if (status !== 'loading') {

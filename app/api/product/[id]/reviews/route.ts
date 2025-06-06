@@ -1,11 +1,11 @@
-import Product from "@/lib/models/Product";
+
 import Review from "@/lib/models/Review";
 import connectToDatabase from "@/lib/mongodb";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const prms = await params;
     const productId = prms.id;
 

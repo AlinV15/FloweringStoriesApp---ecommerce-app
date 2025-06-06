@@ -1,11 +1,10 @@
-// validators/productSchema.ts
+// validators/productSchema.ts - ENHANCED VERSION
 import { z } from "zod";
 
 export const productSchema = z.object({
     type: z.enum(["book", "stationary", "flower"], {
         errorMap: () => ({ message: "Type must be 'book', 'stationary' or 'flower'." })
     }),
-    // FIXED - to be consistent with Product model
     typeRef: z.enum(["Book", "Stationary", "Flower"], {
         errorMap: () => ({ message: "TypeRef must be 'Book', 'Stationary' or 'Flower'." })
     }),
@@ -13,13 +12,11 @@ export const productSchema = z.object({
 
     name: z.string().min(2, { message: "Name must have at least 2 characters." }),
     price: z.number().min(0, { message: "Price must be positive." }),
-    discount: z.number().min(0).max(100).optional(),
+    discount: z.number().min(0).max(100).optional().default(0),
     Description: z.string().max(1000, { message: "Description cannot exceed 1000 characters." }).optional(),
 
-    subcategories: z.array(z.string()).optional(), // Mongo IDs
-    reviews: z.array(z.string()).optional(),       // Mongo IDs
-    image: z.string().url({ message: "Must be a valid URL for image." }).optional(),
+    subcategories: z.array(z.string()).optional().default([]),
+    reviews: z.array(z.string()).optional().default([]),
+    image: z.string().url({ message: "Must be a valid URL for image." }),
     stock: z.number().int().nonnegative({ message: "Stock must be a non-negative integer." })
 });
-
-

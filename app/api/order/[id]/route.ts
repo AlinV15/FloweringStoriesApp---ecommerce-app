@@ -3,12 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Order from "@/lib/models/Order";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const resolvedParams = await params;
-        const id = resolvedParams.id;
+        const { id } = await params; // ✅ Already correct
 
         await connectToDatabase();
 
@@ -94,19 +93,18 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) { // ✅ Fixed: Promise
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const prms = await params
-
+        const { id } = await params; // ✅ Fixed: await params and destructure
 
         await connectToDatabase();
 
-        const order = await Order.findById(prms.id);
+        const order = await Order.findById(id);
         if (!order) {
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
@@ -119,7 +117,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
             return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
-        await Order.findByIdAndDelete(prms.id);
+        await Order.findByIdAndDelete(id);
 
         return NextResponse.json({ message: "Order deleted successfully" });
 
@@ -132,11 +130,12 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) { // ✅ Fixed: Promise
     try {
         const session = await getServerSession(authOptions);
 
-        const prms = await params
+        const { id } = await params; // ✅ Fixed: await params and destructure
+
         // Only admins can update orders
         if (!session || (session.user as any).role !== "admin") {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -174,7 +173,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
         // Handle payment status update
         if (body.payment) {
-            const currentOrder = await Order.findById(prms.id);
+            const currentOrder = await Order.findById(id); // ✅ Use id directly
             if (!currentOrder) {
                 return NextResponse.json({ error: "Order not found" }, { status: 404 });
             }
@@ -196,7 +195,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
         // Update the order
         const updatedOrderResult = await Order.findByIdAndUpdate(
-            prms.id,
+            id, // ✅ Use id directly
             updateData,
             {
                 new: true,

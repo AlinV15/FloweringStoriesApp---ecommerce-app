@@ -14,11 +14,8 @@ import {
     Truck,
     MapPin,
     User,
-    Mail,
-    Phone,
     Lock,
     CheckCircle,
-    AlertCircle
 } from 'lucide-react';
 
 // Type definitions

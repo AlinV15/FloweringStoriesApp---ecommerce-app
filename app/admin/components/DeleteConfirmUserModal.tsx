@@ -22,9 +22,10 @@ export default function UserDeleteConfirmModal({ userId, userName, onClose, onDe
             toast.success('User deleted successfully');
             onDeleted();
             onClose();
-        } catch (err: any) {
-            console.error(err);
-            toast.error(err.message || 'An error occurred while deleting the user');
+        } catch (err) {
+            console.error("Error during deletion:", err);
+            const errorMessage = err instanceof Error ? err.message : 'An error occurred while deleting';
+            toast.error(errorMessage);
         }
     };
 

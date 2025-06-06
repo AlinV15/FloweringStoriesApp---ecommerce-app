@@ -8,7 +8,7 @@ import ProductFormModal from '../components/ProductFormModal';
 import { Plus } from 'lucide-react';
 
 const AdminAllProductsPage = () => {
-    const { products, fetchProducts } = useProductStore();
+    const { fetchProducts } = useProductStore();
     const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 // api/product/[id]/stock/route.ts - Update stock directly
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const prms = await params

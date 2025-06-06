@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Pencil, Trash2, Tags, ExternalLink, AlertCircle, BookOpen, Box, Flower } from 'lucide-react';
+import { Pencil, Trash2, Tags, AlertCircle, BookOpen, Box, Flower } from 'lucide-react';
 import { memo, useState } from 'react';
 
 // Updated to match your mongoose model

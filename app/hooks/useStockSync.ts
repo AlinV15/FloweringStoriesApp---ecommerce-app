@@ -36,7 +36,7 @@ export const useStockSync = (options: UseStockSyncOptions = {}) => {
         if (items.length > 0) {
             try {
                 await syncStockWithServer();
-                console.log('🔄 Stock synchronized with server');
+
             } catch (error) {
                 console.error('❌ Failed to sync stock:', error);
             }

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, Search, Filter, Eye, Edit3, Package, User, Mail } from 'lucide-react';
+import { Trash2, Search, Eye, Edit3, Package, User, Mail, RefreshCcw } from 'lucide-react';
 import { useShopSettings } from '@/contexts/ShopSettingsContext';
 import { useCurrency } from '@/app/hooks/useCurrency';
 
@@ -46,32 +46,108 @@ const OrdersPage = () => {
 
     // Get colors from settings
     const primaryColor = settings?.colors?.primary || '#9c6b63';
-    const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
+    // const secondaryColor = settings?.colors?.secondary || '#f5e1dd';
     const accentColor = settings?.colors?.accent || '#fdf4f1';
 
     // Fetch orders on load
+    // Updated fetchOrders function in your OrdersPage component
     useEffect(() => {
         const fetchOrders = async () => {
+            console.log('🔍 Starting to fetch orders...');
             setLoading(true);
+
             try {
-                const res = await fetch('/api/order');
+                console.log('📡 Making request to /api/order');
+
+                // Add cache busting and explicit headers
+                const res = await fetch('/api/order', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    // Add timestamp to prevent caching
+                    cache: 'no-store'
+                });
+
+                console.log('📊 Response status:', res.status);
+                console.log('📊 Response ok:', res.ok);
+                console.log('📊 Response headers:', Object.fromEntries(res.headers.entries()));
+
                 if (res.ok) {
                     const data = await res.json();
-                    setOrders(Array.isArray(data) ? data : []);
+                    console.log('✅ Raw API Response:', data);
+                    console.log('✅ Response type:', typeof data);
+                    console.log('✅ Is array?', Array.isArray(data));
+
+                    if (data.success) {
+                        console.log('✅ Success flag is true');
+                        console.log('✅ Orders data:', data.orders);
+                        console.log('✅ Orders is array?', Array.isArray(data.orders));
+                        console.log('✅ Orders length:', data.orders?.length);
+
+                        if (Array.isArray(data.orders)) {
+                            console.log('✅ Setting orders:', data.orders);
+                            setOrders(data.orders);
+                        } else {
+                            console.log('❌ Orders is not an array:', data.orders);
+                            setOrders([]);
+                        }
+                    } else {
+                        console.log('❌ Success flag is false or missing');
+                        console.log('❌ Full response:', data);
+                        setOrders([]);
+                    }
                 } else {
-                    console.error('Failed to fetch orders');
+                    console.error('❌ Request failed with status:', res.status);
+                    const errorText = await res.text();
+                    console.error('❌ Error response:', errorText);
                     setOrders([]);
                 }
             } catch (error) {
-                console.error("Failed to fetch orders:", error);
+                console.error("❌ Exception during fetch:", error);
+                if (error instanceof Error) {
+                    console.error("❌ Error stack:", error.stack);
+                }
                 setOrders([]);
+            } finally {
+                console.log('🏁 Fetch completed, setting loading to false');
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchOrders();
     }, []);
 
+    const refreshOrders = async () => {
+        console.log('🔄 Manual refresh triggered');
+        setLoading(true);
+
+        // Force a fresh fetch by adding timestamp
+        const timestamp = new Date().getTime();
+        try {
+            const res = await fetch(`/api/order?t=${timestamp}`, {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                },
+                cache: 'no-store'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                console.log('🔄 Refresh response:', data);
+                if (data.success && Array.isArray(data.orders)) {
+                    setOrders(data.orders);
+                }
+            }
+        } catch (error) {
+            console.error('🔄 Refresh failed:', error);
+        }
+        setLoading(false);
+    };
     // Filter and sort orders
     const filteredOrders = orders.filter(order => {
         // Status filter
@@ -257,6 +333,13 @@ const OrdersPage = () => {
                     <p className="text-gray-600">
                         Manage and track all customer orders ({filteredOrders.length} of {orders.length} orders)
                     </p>
+                    <button
+                        onClick={refreshOrders}
+                        className="ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                        disabled={loading}
+                    >
+                        {loading ? 'Loading...' : <RefreshCcw />}
+                    </button>
                 </div>
 
                 {selectedOrders.length > 0 && (

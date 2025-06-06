@@ -1,7 +1,7 @@
-// types/product.ts - Unified product types
+// types/product.ts - Updated with subcategories
 
 // Import existing types from main types file to avoid conflicts
-import { ProductEntry as APIProductEntry, Review as APIReview, Book, Stationary, Flower } from '@/app/types';
+import { ProductEntry as APIProductEntry, Review as APIReview, Book, Stationary, Flower, Subcategory } from '@/app/types';
 
 export interface Review {
     _id: string;
@@ -43,7 +43,7 @@ export interface FlowerDetails {
     expiryDate: Date;
 }
 
-// Base product interface
+// Base product interface - ✅ Added subcategories
 export interface BaseProduct {
     _id: string;
     name: string;
@@ -56,6 +56,7 @@ export interface BaseProduct {
     averageRating?: number;
     createdAt: string;
     updatedAt: string;
+    subcategories: Subcategory[]; // ✅ Added missing property
 }
 
 // Specific product types
@@ -93,7 +94,7 @@ export function isFlowerProduct(product: Product | APIProductEntry): product is 
     return product.typeRef === 'Flower';
 }
 
-// Converter function from API ProductEntry to Product
+// Converter function from API ProductEntry to Product - ✅ Updated to include subcategories
 export function convertProductEntryToProduct(entry: APIProductEntry): Product | null {
     if (!entry.details) return null;
 
@@ -120,6 +121,7 @@ export function convertProductEntryToProduct(entry: APIProductEntry): Product | 
             entry.reviews.reduce((acc, review) => acc + review.rating, 0) / entry.reviews.length : 0,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
+        subcategories: entry.subcategories || [], // ✅ Added subcategories mapping
     };
 
     switch (entry.typeRef) {

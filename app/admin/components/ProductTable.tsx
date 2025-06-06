@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { ProductEntry } from '@/app/types/index';
+import { ProductEntry, Review } from '@/app/types/index';
 import ProductRow from './ProductRow';
 import ProductFormModal from './ProductFormModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -28,8 +28,8 @@ export const ProductTable = ({
     const [subcategoryProduct, setSubcategoryProduct] = useState<ProductEntry | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Get filtered products from store (ProductFilterBar handles the filtering)
-    const { products, allProducts, fetchProducts } = useProductStore();
+    // Get filtered products from store
+    const { filteredProducts, allProducts, fetchProducts } = useProductStore();
 
     useEffect(() => {
         if (!allProducts.length) {
@@ -50,22 +50,44 @@ export const ProductTable = ({
         setSubcategoryProduct(product);
     }, []);
 
+    // SIMPLIFIED: Remove auto-refresh on modal close since handleSubmit handles it
     const handleCloseEditModal = useCallback(() => {
         setSelectedProduct(null);
     }, []);
 
     const handleCloseDeleteModal = useCallback(() => {
         setDeleteProduct(null);
+        // Refresh after delete
+        setTimeout(() => {
+            handleRefresh();
+        }, 100);
     }, []);
 
     const handleCloseSubcategoryModal = useCallback(() => {
         setSubcategoryProduct(null);
     }, []);
 
+    // SIMPLIFIED: Basic refresh function
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
         try {
+            // Reset store and force fresh fetch
+            useProductStore.setState({
+                rawProducts: [],
+                allProducts: [],
+                products: [],
+                filteredProducts: [],
+                initialized: false
+            });
+
             await fetchProducts();
+
+            // Wait and reapply filters
+            setTimeout(() => {
+                const store = useProductStore.getState();
+                store.applyFilters();
+            }, 200);
+
         } catch (error) {
             console.error('Failed to refresh products:', error);
         } finally {
@@ -77,8 +99,7 @@ export const ProductTable = ({
         await handleRefresh();
     }, [handleRefresh]);
 
-    // Use the filtered products from the store (filtered by ProductFilterBar)
-    const displayProducts = products || [];
+    const displayProducts = filteredProducts || [];
     const totalProducts = allProducts.length;
     const isDisplayLoading = isRefreshing;
 
@@ -133,9 +154,13 @@ export const ProductTable = ({
                         {isDisplayLoading ? (
                             <tr>
                                 <td colSpan={7} className="p-8 text-center text-gray-500">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#9c6b63]"></div>
-                                        Loading products...
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-[#9c6b63] rounded-full animate-bounce"></div>
+                                            <div className="w-2 h-2 bg-[#9c6b63] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                            <div className="w-2 h-2 bg-[#9c6b63] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        </div>
+                                        <span className="text-sm">Loading products</span>
                                     </div>
                                 </td>
                             </tr>
@@ -152,10 +177,29 @@ export const ProductTable = ({
                             displayProducts.map((product) => (
                                 <ProductRow
                                     key={product._id}
-                                    product={product}
-                                    onEdit={() => handleEdit(product)}
-                                    onDelete={() => handleDelete(product)}
-                                    onManageSubcategories={() => handleManageSubcategories(product)}
+                                    product={{
+                                        ...product,
+                                        refId: (product as any).refId ?? product._id,
+                                        reviews: (product.reviews ?? []) as unknown as Review[]
+                                    }}
+                                    onEdit={() => handleEdit({
+                                        ...product,
+                                        refId: (product as any).refId ?? product._id,
+                                        subcategories: (product as any).subcategories ?? [],
+                                        reviews: (product.reviews ?? []) as unknown as Review[]
+                                    })}
+                                    onDelete={() => handleDelete({
+                                        ...product,
+                                        refId: (product as any).refId ?? product._id,
+                                        subcategories: (product as any).subcategories ?? [],
+                                        reviews: (product.reviews ?? []) as unknown as Review[]
+                                    })}
+                                    onManageSubcategories={() => handleManageSubcategories({
+                                        ...product,
+                                        refId: (product as any).refId ?? product._id,
+                                        subcategories: (product as any).subcategories ?? [],
+                                        reviews: (product.reviews ?? []) as unknown as Review[]
+                                    })}
                                 />
                             ))
                         )}
@@ -169,7 +213,6 @@ export const ProductTable = ({
                     mode="edit"
                     initialData={selectedProduct}
                     onClose={handleCloseEditModal}
-
                 />
             )}
 
@@ -178,7 +221,6 @@ export const ProductTable = ({
                     productId={deleteProduct.refId}
                     type={deleteProduct.type}
                     onClose={handleCloseDeleteModal}
-
                 />
             )}
 

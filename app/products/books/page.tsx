@@ -13,16 +13,12 @@ import {
     Calendar,
     User,
     BookOpen,
-    Languages,
     Building,
     Filter,
     ArrowUp,
     DollarSign,
     RotateCcw,
     X,
-    TrendingUp,
-    Sparkles,
-    Clock,
     PackageOpen,
     Bookmark,
     Globe
@@ -849,7 +845,7 @@ export default function BooksPage() {
     // Pagination helper
     const getPaginationNumbers = useCallback(() => {
         const maxVisiblePages = 5;
-        const pages = [];
+        const pages: number[] = [];
 
         if (totalPages <= maxVisiblePages) {
             for (let i = 1; i <= totalPages; i++) {

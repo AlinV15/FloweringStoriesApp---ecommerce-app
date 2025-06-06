@@ -3,8 +3,8 @@ import { z } from 'zod';
 
 // Helper schemas for reusability
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color');
-const urlSchema = z.string().url().optional().or(z.literal(''));
-const timeSchema = z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Must be in HH:MM format');
+// const urlSchema = z.string().url().optional().or(z.literal(''));
+// const timeSchema = z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Must be in HH:MM format');
 
 // Logo validation - updated to match Mongoose schema
 const logoSchema = z.object({

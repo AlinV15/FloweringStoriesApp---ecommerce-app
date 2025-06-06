@@ -6,7 +6,7 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import Link from 'next/link';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
-import { Flower, Leaf, ArrowUp } from 'lucide-react';
+import { Flower, ArrowUp } from 'lucide-react';
 
 import { useProductStore } from '@/app/stores/ProductStore';
 import { isFlowerProduct, Product } from '@/app/types/product';

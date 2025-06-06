@@ -5,11 +5,11 @@ import { useProductStore } from '@/app/stores/ProductStore';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react';
 import {
     ChevronUpDownIcon,
-    FunnelIcon,
     XMarkIcon,
     AdjustmentsHorizontalIcon,
     MagnifyingGlassIcon,
-    StarIcon
+    StarIcon,
+    TagIcon
 } from '@heroicons/react/20/solid';
 
 interface FilterState {
@@ -19,6 +19,7 @@ interface FilterState {
     priceRange: [number, number];
     stockStatus: string;
     discountRange: [number, number];
+    hasDiscount: boolean; // Nou: filtrare pentru produse cu discount
     ratingFilter: number;
     createdDateRange: string;
 }
@@ -32,10 +33,11 @@ const ProductFilterBar = () => {
     const [filters, setFilters] = useState<FilterState>({
         search: '',
         type: '',
-        sortBy: 'createdAt',
+        sortBy: 'name',
         priceRange: [0, 1000],
         stockStatus: '',
         discountRange: [0, 100],
+        hasDiscount: false, // Nou
         ratingFilter: 0,
         createdDateRange: '',
     });
@@ -43,7 +45,7 @@ const ProductFilterBar = () => {
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
-    const { allProducts, setProducts } = useProductStore();
+    const { allProducts, setFilters: setStoreFilters, filters: storeFilters } = useProductStore();
 
     // Calculate price range from all products
     const priceRange: number[] = useMemo(() => {
@@ -52,31 +54,42 @@ const ProductFilterBar = () => {
         return [Math.min(...prices), Math.max(...prices)];
     }, [allProducts]);
 
+    // Calculate discount range from all products
+    const discountRange: number[] = useMemo(() => {
+        if (allProducts.length === 0) return [0, 100];
+        const discounts = allProducts.map(p => p.discount || 0);
+        return [Math.min(...discounts), Math.max(...discounts)];
+    }, [allProducts]);
+
     // Filter options
     const typeOptions: Option[] = [
-        { label: 'All Types', value: '' },
+        { label: 'All Types', value: 'all' },
         { label: 'Books', value: 'book' },
         { label: 'Stationary', value: 'stationary' },
         { label: 'Flowers', value: 'flower' },
     ];
 
+    // Îmbunătățit: sortare cu opțiuni descrescătoare mai clare
     const sortOptions: Option[] = [
-        { label: 'Newest First', value: 'createdAt' },
-        { label: 'Oldest First', value: '-createdAt' },
-        { label: 'Price: Low to High', value: 'price' },
-        { label: 'Price: High to Low', value: '-price' },
         { label: 'Name: A to Z', value: 'name' },
-        { label: 'Name: Z to A', value: '-name' },
+        { label: 'Name: Z to A', value: 'name-desc' },
+        { label: 'Price: Low to High', value: 'price-low' },
+        { label: 'Price: High to Low', value: 'price-high' },
         { label: 'Highest Rated', value: 'rating' },
-        { label: 'Most Discounted', value: 'discount' },
-        { label: 'Stock: High to Low', value: '-stock' },
+        { label: 'Lowest Rated', value: 'rating-desc' },
+        { label: 'Newest First', value: 'newest' },
+        { label: 'Oldest First', value: 'oldest' },
+        { label: 'Highest Discount', value: 'discount-desc' }, // Nou
+        { label: 'Lowest Discount', value: 'discount-asc' }, // Nou
+        { label: 'Most Stock', value: 'stock-desc' }, // Nou
+        { label: 'Least Stock', value: 'stock-asc' }, // Nou
     ];
 
     const stockStatusOptions: Option[] = [
-        { label: 'All Stock Levels', value: '' },
-        { label: 'In Stock', value: 'inStock' },
-        { label: 'Low Stock (< 10)', value: 'lowStock' },
-        { label: 'Out of Stock', value: 'outOfStock' },
+        { label: 'All Stock Levels', value: 'all' },
+        { label: 'In Stock', value: 'in-stock' },
+        { label: 'Out of Stock', value: 'out-of-stock' },
+        { label: 'Low Stock (≤5)', value: 'low-stock' }, // Nou
     ];
 
     const dateRangeOptions: Option[] = [
@@ -88,137 +101,43 @@ const ProductFilterBar = () => {
         { label: 'Last Year', value: '1y' },
     ];
 
-    // Calculate average rating for a product
-    const calculateAverageRating = (product: any) => {
-        if (!product.reviews || product.reviews.length === 0) return 0;
-        // This assumes reviews have a rating field - adjust based on your Review model
-        const totalRating = product.reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0);
-        return totalRating / product.reviews.length;
-    };
-
-    // Filter and sort products
+    // Îmbunătățit: Update store filters cu logica de discount îmbunătățită
     useEffect(() => {
-        let filtered = [...allProducts];
-
-        // Text search
-        if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            filtered = filtered.filter((p) =>
-                p.name?.toLowerCase().includes(searchLower) ||
-                p.description?.toLowerCase().includes(searchLower)
-            );
-        }
-
-        // Type filter
-        if (filters.type) {
-            filtered = filtered.filter((p) => p.type === filters.type);
-        }
-
-        // Price range filter
-        filtered = filtered.filter((p) => {
-            const price = p.price || 0;
-            return price >= filters.priceRange[0] && price <= filters.priceRange[1];
-        });
-
-        // Stock status filter
-        if (filters.stockStatus) {
-            filtered = filtered.filter((p) => {
-                const stock = p.stock || 0;
-                switch (filters.stockStatus) {
-                    case 'inStock':
-                        return stock > 0;
-                    case 'lowStock':
-                        return stock > 0 && stock < 10;
-                    case 'outOfStock':
-                        return stock === 0;
-                    default:
-                        return true;
-                }
-            });
-        }
-
-        // Discount range filter
-        filtered = filtered.filter((p) => {
-            const discount = p.discount || 0;
-            return discount >= filters.discountRange[0] && discount <= filters.discountRange[1];
-        });
-
-        // Rating filter
-        if (filters.ratingFilter > 0) {
-            filtered = filtered.filter((p) => {
-                const avgRating = calculateAverageRating(p);
-                return avgRating >= filters.ratingFilter;
-            });
-        }
-
-        // Date range filter
-        if (filters.createdDateRange) {
-            const now = new Date();
-            const cutoffDate = new Date();
-
-            switch (filters.createdDateRange) {
-                case '7d':
-                    cutoffDate.setDate(now.getDate() - 7);
-                    break;
-                case '30d':
-                    cutoffDate.setDate(now.getDate() - 30);
-                    break;
-                case '3m':
-                    cutoffDate.setMonth(now.getMonth() - 3);
-                    break;
-                case '6m':
-                    cutoffDate.setMonth(now.getMonth() - 6);
-                    break;
-                case '1y':
-                    cutoffDate.setFullYear(now.getFullYear() - 1);
-                    break;
+        const storeFilterUpdate = {
+            search: filters.search,
+            categoryFilter: filters.type || 'all',
+            priceRange: {
+                min: filters.priceRange[0].toString(),
+                max: filters.priceRange[1].toString()
+            },
+            sortBy: filters.sortBy,
+            ratingFilter: filters.ratingFilter,
+            stockFilter: filters.stockStatus || 'all',
+            // Îmbunătățit: logica de discount
+            discountFilter: filters.hasDiscount || filters.discountRange[0] > 0 || filters.discountRange[1] < 100,
+            // Adaugă range-ul de discount pentru filtrare mai precisă
+            discountRange: {
+                min: filters.discountRange[0],
+                max: filters.discountRange[1]
             }
+        };
 
-            if (filters.createdDateRange !== '') {
-                filtered = filtered.filter((p) => new Date(p.createdAt) >= cutoffDate);
-            }
-        }
+        setStoreFilters(storeFilterUpdate);
+    }, [filters, setStoreFilters]);
 
-        // Sorting
-        filtered.sort((a, b) => {
-            switch (filters.sortBy) {
-                case 'price':
-                    return (a.price || 0) - (b.price || 0);
-                case '-price':
-                    return (b.price || 0) - (a.price || 0);
-                case 'name':
-                    return (a.name || '').localeCompare(b.name || '');
-                case '-name':
-                    return (b.name || '').localeCompare(a.name || '');
-                case 'rating':
-                    return calculateAverageRating(b) - calculateAverageRating(a);
-                case 'discount':
-                    return (b.discount || 0) - (a.discount || 0);
-                case '-stock':
-                    return (b.stock || 0) - (a.stock || 0);
-                case '-createdAt':
-                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                case 'createdAt':
-                default:
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            }
-        });
-
-        setProducts(filtered);
-    }, [filters, allProducts, setProducts]);
-
-    // Count active filters
+    // Îmbunătățit: Count active filters cu noile opțiuni
     useEffect(() => {
         let count = 0;
         if (filters.search) count++;
-        if (filters.type) count++;
+        if (filters.type && filters.type !== 'all') count++;
         if (filters.priceRange[0] !== priceRange[0] || filters.priceRange[1] !== priceRange[1]) count++;
-        if (filters.stockStatus) count++;
-        if (filters.discountRange[0] !== 0 || filters.discountRange[1] !== 100) count++;
+        if (filters.stockStatus && filters.stockStatus !== 'all') count++;
+        if (filters.discountRange[0] !== discountRange[0] || filters.discountRange[1] !== discountRange[1]) count++;
+        if (filters.hasDiscount) count++;
         if (filters.ratingFilter > 0) count++;
         if (filters.createdDateRange) count++;
         setActiveFiltersCount(count);
-    }, [filters, priceRange]);
+    }, [filters, priceRange, discountRange]);
 
     const updateFilter = (key: keyof FilterState, value: any) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -227,11 +146,12 @@ const ProductFilterBar = () => {
     const clearAllFilters = () => {
         setFilters({
             search: '',
-            type: '',
-            sortBy: 'createdAt',
+            type: 'all',
+            sortBy: 'name',
             priceRange: priceRange.slice(0, 2) as [number, number],
-            stockStatus: '',
-            discountRange: [0, 100],
+            stockStatus: 'all',
+            discountRange: discountRange.slice(0, 2) as [number, number],
+            hasDiscount: false,
             ratingFilter: 0,
             createdDateRange: '',
         });
@@ -330,6 +250,22 @@ const ProductFilterBar = () => {
         </div>
     );
 
+    // Nou: Component pentru toggle discount
+    const renderDiscountToggle = () => (
+        <div className="flex items-center space-x-2">
+            <button
+                onClick={() => updateFilter('hasDiscount', !filters.hasDiscount)}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${filters.hasDiscount
+                    ? 'bg-red-100 text-red-800 border border-red-200'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                    }`}
+            >
+                <TagIcon className="w-4 h-4" />
+                {filters.hasDiscount ? 'On Sale Only' : 'Show All'}
+            </button>
+        </div>
+    );
+
     return (
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
             {/* Main Filter Row */}
@@ -345,8 +281,11 @@ const ProductFilterBar = () => {
                     />
                 </div>
 
-                {renderListbox(typeOptions, filters.type, (value) => updateFilter('type', value), 'All Types')}
+                {renderListbox(typeOptions, filters.type || 'all', (value) => updateFilter('type', value), 'All Types')}
                 {renderListbox(sortOptions, filters.sortBy, (value) => updateFilter('sortBy', value), 'Sort by')}
+
+                {/* Nou: Quick discount toggle */}
+                {renderDiscountToggle()}
 
                 <div className="flex items-center gap-2">
                     <button
@@ -399,7 +338,7 @@ const ProductFilterBar = () => {
                                 priceRange[0],
                                 priceRange[1],
                                 1,
-                                '$'
+                                '€'
                             )}
                         </div>
 
@@ -408,21 +347,21 @@ const ProductFilterBar = () => {
                             <label className="text-sm font-medium text-[#9c6b63] block mb-2">Stock Status</label>
                             {renderListbox(
                                 stockStatusOptions,
-                                filters.stockStatus,
+                                filters.stockStatus || 'all',
                                 (value) => updateFilter('stockStatus', value),
                                 'All Stock Levels'
                             )}
                         </div>
 
-                        {/* Discount Range */}
+                        {/* Îmbunătățit: Discount Range cu mai multe opțiuni */}
                         <div>
                             {renderRangeSlider(
                                 'Discount Range',
                                 filters.discountRange,
                                 (value) => updateFilter('discountRange', value),
-                                0,
-                                100,
-                                5,
+                                discountRange[0],
+                                discountRange[1],
+                                1,
                                 '%'
                             )}
                         </div>
@@ -447,7 +386,7 @@ const ProductFilterBar = () => {
                 </div>
             </Transition>
 
-            {/* Active Filters Display */}
+            {/* Îmbunătățit: Active Filters Display cu noile filtre */}
             {activeFiltersCount > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <span className="text-sm font-medium text-gray-600">Active filters:</span>
@@ -459,10 +398,26 @@ const ProductFilterBar = () => {
                             </button>
                         </span>
                     )}
-                    {filters.type && (
+                    {filters.type && filters.type !== 'all' && (
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs flex items-center gap-1">
                             Type: {typeOptions.find(o => o.value === filters.type)?.label}
-                            <button onClick={() => updateFilter('type', '')}>
+                            <button onClick={() => updateFilter('type', 'all')}>
+                                <XMarkIcon className="w-3 h-3" />
+                            </button>
+                        </span>
+                    )}
+                    {filters.hasDiscount && (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs flex items-center gap-1">
+                            On Sale Only
+                            <button onClick={() => updateFilter('hasDiscount', false)}>
+                                <XMarkIcon className="w-3 h-3" />
+                            </button>
+                        </span>
+                    )}
+                    {(filters.discountRange[0] !== discountRange[0] || filters.discountRange[1] !== discountRange[1]) && (
+                        <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs flex items-center gap-1">
+                            Discount: {filters.discountRange[0]}%-{filters.discountRange[1]}%
+                            <button onClick={() => updateFilter('discountRange', discountRange.slice(0, 2))}>
                                 <XMarkIcon className="w-3 h-3" />
                             </button>
                         </span>
@@ -481,4 +436,4 @@ const ProductFilterBar = () => {
     );
 };
 
-export default ProductFilterBar;
+export default ProductFilterBar

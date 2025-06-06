@@ -1,7 +1,7 @@
 // app/admin/settings/components/SettingsPreview.tsx
 'use client'
 import React from 'react';
-import { Eye, Edit, Clock, User, Store, Globe, Mail, Phone, MapPin, Palette, CreditCard } from 'lucide-react';
+import { Eye, Edit, Clock, Store, Globe, Mail, Phone, MapPin, Palette, CreditCard } from 'lucide-react';
 import { ShopSettings } from '@/app/types';
 
 interface SettingsPreviewProps {

@@ -6,8 +6,7 @@ import ShopSettings from '@/lib/models/ShopSettings';
 import connectToDatabase from '@/lib/mongodb';
 
 import { shopSettingsUpdateSchema } from '@/lib/validators/shoppingSettingsSchema';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
+import { authOptions } from '@/lib/auth'
 
 // Rate limiting for individual updates
 const updateAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -32,9 +31,9 @@ function checkUpdateRateLimit(userId: string) {
 }
 
 // GET - Fetch specific setting by ID
-export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+export async function GET(_: NextRequest,
+
+    { params }: { params: Promise<{ id: string }> } // ✅ Updated to Promise
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -43,7 +42,7 @@ export async function GET(
         }
 
         await connectToDatabase();
-        const settingId = await params.id;
+        const { id: settingId } = await params; // ✅ Await params and destructure
 
         const settings = await ShopSettings.findById(settingId);
         if (!settings) {
@@ -61,10 +60,10 @@ export async function GET(
     }
 }
 
-// app/api/admin/settings/[id]/route.ts - Updated PUT method
+// PUT - Update specific setting by ID
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> } // ✅ Updated to Promise
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -82,7 +81,7 @@ export async function PUT(
         }
 
         await connectToDatabase();
-        const settingId = await params.id;
+        const { id: settingId } = await params; // ✅ Await params and destructure
         const body = await req.json();
 
         console.log('Received body:', JSON.stringify(body, null, 2));
@@ -217,9 +216,8 @@ export async function PUT(
 }
 
 // DELETE - Delete specific setting by ID
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+export async function DELETE(_: NextRequest,
+    { params }: { params: Promise<{ id: string }> } // ✅ Updated to Promise
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -228,7 +226,7 @@ export async function DELETE(
         }
 
         await connectToDatabase();
-        const settingId = await params.id;
+        const { id: settingId } = await params; // ✅ Await params and destructure
 
         const deletedSettings = await ShopSettings.findByIdAndDelete(settingId);
 

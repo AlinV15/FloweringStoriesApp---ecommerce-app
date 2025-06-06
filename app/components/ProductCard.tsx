@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
     Star, ShoppingCart, Book, Pencil, Flower, User, Calendar,
-    Bookmark, Globe, Hash, Building, Droplets, Clock, Sun,
+    Bookmark, Globe, Building, Droplets, Clock, Sun,
     Ruler, Package, Palette, Leaf, AlertCircle, CheckCircle,
     Loader2
 } from 'lucide-react';
@@ -15,9 +15,6 @@ import { useCartStore } from '@/app/stores/CartStore';
 import { ProductEntry } from '@/app/types';
 import {
     Product,
-    isBookProduct,
-    isStationaryProduct,
-    isFlowerProduct
 } from '@/app/types/product';
 
 interface ProductCardProps {
@@ -28,7 +25,7 @@ interface ProductCardProps {
 }
 
 const StarRating = ({ rating }: { rating: number }) => {
-    const stars = [];
+    const stars: React.ReactNode[] = [];
     const fullStars = Math.floor(rating);
 
     for (let i = 0; i < 5; i++) {
@@ -75,25 +72,24 @@ const StockIndicator = ({ stock, isLowStock }: { stock: number; isLowStock: bool
 };
 
 // Flower-specific components
-const ExpiryStatus = ({ expiryDate }: { expiryDate: Date }) => {
-    const now = new Date();
-    const expiry = new Date(expiryDate);
-    const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+// const ExpiryStatus = ({ expiryDate }: { expiryDate: Date }) => {
+//     const now = new Date();
+//     const expiry = new Date(expiryDate);
+//     const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (daysLeft < 0) {
-        return <span className="text-red-500 text-xs font-medium">Expired</span>;
-    } else if (daysLeft <= 3) {
-        return <span className="text-orange-500 text-xs font-medium">Expires in {daysLeft}d</span>;
-    } else if (daysLeft <= 7) {
-        return <span className="text-yellow-500 text-xs font-medium">Expires in {daysLeft}d</span>;
-    } else {
-        return <span className="text-green-500 text-xs font-medium">Fresh ({daysLeft}d left)</span>;
-    }
-};
+//     if (daysLeft < 0) {
+//         return <span className="text-red-500 text-xs font-medium">Expired</span>;
+//     } else if (daysLeft <= 3) {
+//         return <span className="text-orange-500 text-xs font-medium">Expires in {daysLeft}d</span>;
+//     } else if (daysLeft <= 7) {
+//         return <span className="text-yellow-500 text-xs font-medium">Expires in {daysLeft}d</span>;
+//     } else {
+//         return <span className="text-green-500 text-xs font-medium">Fresh ({daysLeft}d left)</span>;
+//     }
+// };
 
 export default function ProductCard({
     product,
-    showDetailedInfo = false,
     className = "",
     asLink = false
 }: ProductCardProps) {
@@ -499,10 +495,10 @@ export default function ProductCard({
                         onClick={handleAddToCart}
                         disabled={currentStock === 0 || isAddingToCart || isUpdatingStock}
                         className={`px-4 py-2 text-white rounded-xl transition-all transform shadow-lg flex items-center gap-2 z-10 relative font-medium ${currentStock === 0
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : isAddingToCart || isUpdatingStock
-                                    ? 'bg-gray-500 cursor-wait'
-                                    : 'hover:scale-105 hover:shadow-xl'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : isAddingToCart || isUpdatingStock
+                                ? 'bg-gray-500 cursor-wait'
+                                : 'hover:scale-105 hover:shadow-xl'
                             }`}
                         style={currentStock > 0 && !isAddingToCart && !isUpdatingStock ?
                             { background: `linear-gradient(135deg, #9a6a63 0%, #c1a5a2 100%)` } : {}}

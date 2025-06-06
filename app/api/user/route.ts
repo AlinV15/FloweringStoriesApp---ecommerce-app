@@ -6,15 +6,7 @@ import User from "@/lib/models/User";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/utils/rate-limit";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
-
-// Schema de validare a datelor pentru înregistrare
-const registerSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
-});
+import { authOptions } from '@/lib/auth';
 
 
 export async function POST(req: NextRequest) {

@@ -6,17 +6,15 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import { OrderConfirmationClient } from './OrderConfirmationClient';
 import {
-    CheckCircle,
+
     Package,
     Truck,
     MapPin,
-    Calendar,
+
     Mail,
     Phone,
     ArrowLeft,
     Clock,
-    Loader2,
-    AlertCircle
 } from 'lucide-react';
 
 // Fetch order data on server

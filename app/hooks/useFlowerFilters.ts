@@ -188,7 +188,7 @@ export const usePagination = (items: any[], itemsPerPage: number = 12) => {
     // Get pagination numbers for display
     const getPaginationNumbers = useCallback(() => {
         const maxVisiblePages = 5;
-        const pages = [];
+        const pages: number[] = [];
 
         if (totalPages <= maxVisiblePages) {
             for (let i = 1; i <= totalPages; i++) {

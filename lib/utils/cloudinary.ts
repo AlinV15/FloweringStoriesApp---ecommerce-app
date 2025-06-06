@@ -157,7 +157,7 @@ export const getOptimizedImageUrl = (
         return '';
     }
 
-    const transformations = [];
+    const transformations: string[] = [];
 
     if (options.width) transformations.push(`w_${options.width}`);
     if (options.height) transformations.push(`h_${options.height}`);

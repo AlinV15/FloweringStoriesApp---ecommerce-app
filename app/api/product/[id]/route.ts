@@ -9,7 +9,7 @@ import Subcategory from "@/lib/models/Subcategory";
 import Review from "@/lib/models/Review";
 import User from "@/lib/models/User";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await connectToDatabase();
 
@@ -30,9 +30,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             }, { status: 404 });
         }
 
-        let detailedProduct = null;
-        let subcategories = [];
-        let reviews = [];
+        let detailedProduct: (typeof Book | typeof Stationary | typeof Flower | null | any) = null;
+        let subcategories: any[] = [];
+        let reviews: any[] = [];
 
         // Fetch subcategories manually
         if (product.subcategories && product.subcategories.length > 0) {
@@ -65,12 +65,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
             // Fetch user details for each review manually
             const reviewsWithUsers = await Promise.all(productReviews.map(async (review) => {
-                let userData = null;
+                let userData: { firstName: string; lastName: string; email: string } | null = null;
 
                 try {
                     // Fetch user data manually using userId
                     if (review.userId) {
-                        userData = await User.findById(review.userId).select('firstName lastName email');
+                        const foundUser = await User.findById(review.userId).select('firstName lastName email');
+                        userData = foundUser && !Array.isArray(foundUser)
+                            ? {
+                                firstName: foundUser.firstName,
+                                lastName: foundUser.lastName,
+                                email: foundUser.email
+                            }
+                            : null;
                     }
                 } catch (userError) {
                     console.error(`Error fetching user for review ${review._id}:`, userError);
@@ -132,7 +139,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 
-export async function PUT(_: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const body = await _.json();
         await connectToDatabase();

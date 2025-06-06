@@ -1,7 +1,7 @@
 // app/api/subcategory/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 import connectToDatabase from "@/lib/mongodb";
 import Subcategory from "@/lib/models/Subcategory";
 import { subcategorySchema } from "@/lib/validators";

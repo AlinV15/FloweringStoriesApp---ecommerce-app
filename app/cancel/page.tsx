@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export default function CancelPage() {
-    const router = useRouter();
+    // const router = useRouter();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#f6eeec] via-[#fefdfc] to-[#f2ded9]">

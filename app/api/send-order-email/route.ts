@@ -3,10 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import connectToDatabase from '@/lib/mongodb';
 import Order from '@/lib/models/Order';
-import OrderItem from '@/lib/models/OrderItem';
-import Product from '@/lib/models/Product';
-import User from '@/lib/models/User';
-import Address from '@/lib/models/Address';
+
 
 // Configurează Nodemailer cu variabilele tale
 const createTransporter = () => {

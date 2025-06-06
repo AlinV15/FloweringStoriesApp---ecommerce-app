@@ -97,7 +97,7 @@ export default function CartPage() {
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-xl font-semibold text-[#9a6a63]">Cart Items</h2>
                                     <button
-                                        onClick={clearCart}
+                                        onClick={() => clearCart()}
                                         className="text-sm text-red-500 hover:text-red-700 transition"
                                     >
                                         Clear All

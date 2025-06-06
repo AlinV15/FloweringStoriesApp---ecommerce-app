@@ -18,7 +18,7 @@ const DeleteConfirmCatModal = ({ categoryId, categoryName, type, onClose, onDele
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const { deleteSubcategory } = useSubcategoryStore();
-    const { products, updateProduct, fetchProducts } = useProductStore();
+    const { products, fetchProducts } = useProductStore();
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -42,7 +42,7 @@ const DeleteConfirmCatModal = ({ categoryId, categoryName, type, onClose, onDele
                 await Promise.all(productsToUpdate.map(async (product) => {
                     // Filter out the deleted category ID
                     const updatedSubcategories = product.subcategories.filter(
-                        subCatId => subCatId._id !== categoryId
+                        subCat => subCat._id !== categoryId
                     );
 
                     // Update the product with the filtered subcategories
@@ -61,10 +61,12 @@ const DeleteConfirmCatModal = ({ categoryId, categoryName, type, onClose, onDele
 
             toast.success(`Category "${categoryName}" deleted successfully!`);
             onDeleted();
-        } catch (err: any) {
+        } catch (err) {
+            // ✅ Eliminat 'any' și folosit type guard
             console.error("Error during deletion:", err);
-            setError(err.message || 'An error occurred while deleting');
-            toast.error(err.message || 'An error occurred while deleting');
+            const errorMessage = err instanceof Error ? err.message : 'An error occurred while deleting';
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsDeleting(false);
         }

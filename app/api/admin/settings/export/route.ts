@@ -1,9 +1,9 @@
 // app/api/admin/settings/export/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import ShopSettings from '@/lib/models/ShopSettings';
 import connectToDatabase from '@/lib/mongodb';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 
 export async function GET() {

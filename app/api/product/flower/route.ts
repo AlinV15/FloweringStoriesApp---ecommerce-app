@@ -5,7 +5,7 @@ import { flowerSchema, productSchema } from "@/lib/validators";
 import { z } from "zod";
 import Flower from "@/lib/models/Flower";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 
 // combinăm schema: validăm book și product (fără refId!)
 const flowerProductSchema = z.object({

@@ -28,15 +28,7 @@ const StockSyncProvider = ({ children }: { children: ReactNode }) => {
         syncOnVisible: true
     });
 
-    // Show stock sync status in development (only for admin)
-    useEffect(() => {
-        if (process.env.NODE_ENV === 'development' && isAdmin) {
-            console.log('🔄 Stock sync active:', isActive);
-            if (lastSync) {
-                console.log('📅 Last sync:', new Date(lastSync).toLocaleTimeString());
-            }
-        }
-    }, [isActive, lastSync, isAdmin]);
+
 
     // Expose manual sync globally for emergency use (admin only)
     useEffect(() => {

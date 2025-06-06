@@ -5,7 +5,7 @@ import { productSchema, stationarySchema } from "@/lib/validators";
 import { z } from "zod";
 import Stationary from "@/lib/models/Stationary";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 
 // combinăm schema: validăm book și product (fără refId!)
 const stnyProductSchema = z.object({

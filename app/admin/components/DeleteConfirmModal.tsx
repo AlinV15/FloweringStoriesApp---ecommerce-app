@@ -40,8 +40,10 @@ const DeleteConfirmModal = ({ productId, onClose, type }: Props) => {
             } else {
                 throw new Error();
             }
-        } catch (err: any) {
-            toast.error(err.message || 'An error occurred while deleting.');
+        } catch (err) {
+            console.error("Error during deletion:", err);
+            const errorMessage = err instanceof Error ? err.message : 'An error occurred while deleting';
+            toast.error(errorMessage);
         }
     };
 

@@ -3,29 +3,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 // Update the import path below to the actual location of your [...nextauth].ts file
 // Update the path below to the correct location of your [...nextauth].ts file
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.id !== params.id) {
+    const { id } = await params
+    if (!session || session.user.id !== id) {
         return NextResponse.json({ error: "Acces interzis" }, { status: 403 });
     }
 
     await connectToDatabase();
-    const prms = await params
-    const id = await prms.id
     const user = await User.findById(id).select("-password");
     if (!user) return NextResponse.json({ error: "Utilizatorul nu există" }, { status: 404 });
 
     return NextResponse.json(user);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
 
@@ -62,7 +61,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json(updatedUser);
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "admin") {

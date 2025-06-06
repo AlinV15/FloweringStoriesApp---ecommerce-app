@@ -10,8 +10,11 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+
+# Tests and Mocks
+_tests_/
+_mocks_/
+coverage/
 
 # next.js
 /.next/
@@ -39,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Sentry Config File
+.env.sentry-build-plugin

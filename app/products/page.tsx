@@ -26,11 +26,11 @@ import {
     RotateCcw,
     X,
     Clock,
-    TrendingUp,
-    Sparkles
 } from 'lucide-react';
 
 import { useProductStore } from '../stores/ProductStore';
+
+
 
 // Lazy load components
 const ProductCard = lazy(() => import("@/app/components/ProductCard"));
@@ -727,7 +727,7 @@ export default function ProductsPage() {
     // Pagination helper
     const getPaginationNumbers = useCallback(() => {
         const maxVisiblePages = 5;
-        const pages = [];
+        const pages: number[] = [];
 
         if (totalPages <= maxVisiblePages) {
             for (let i = 1; i <= totalPages; i++) {
