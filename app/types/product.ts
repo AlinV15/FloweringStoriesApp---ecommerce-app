@@ -46,6 +46,7 @@ export interface FlowerDetails {
 // Base product interface - ✅ Added subcategories
 export interface BaseProduct {
     _id: string;
+    refId: string;
     name: string;
     price: number;
     image: string;
@@ -61,18 +62,21 @@ export interface BaseProduct {
 
 // Specific product types
 export interface BookProduct extends BaseProduct {
+    _id: string; // Ensure _id is included in the base product
     typeRef: 'Book';
     type: 'book';
     details: BookDetails;
 }
 
 export interface StationaryProduct extends BaseProduct {
+    _id: string; // Ensure _id is included in the base product
     typeRef: 'Stationary';
     type: 'stationary';
     details: StationaryDetails;
 }
 
 export interface FlowerProduct extends BaseProduct {
+    _id: string; // Ensure _id is included in the base product
     typeRef: 'Flower';
     type: 'flower';
     details: FlowerDetails;

@@ -190,7 +190,7 @@ export const ProductTable = ({
                                     })}
                                     onDelete={() => handleDelete({
                                         ...product,
-                                        refId: (product as any).refId ?? product._id,
+                                        refId: product.refId,
                                         subcategories: (product as any).subcategories ?? [],
                                         reviews: (product.reviews ?? []) as unknown as Review[]
                                     })}
@@ -218,7 +218,7 @@ export const ProductTable = ({
 
             {deleteProduct && (
                 <DeleteConfirmModal
-                    productId={deleteProduct.refId}
+                    productId={deleteProduct._id}
                     type={deleteProduct.type}
                     onClose={handleCloseDeleteModal}
                 />

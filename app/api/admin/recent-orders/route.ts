@@ -14,7 +14,7 @@ export async function GET() {
             .limit(10) // Mărit la 10 pentru mai multe ordere
             .lean()
 
-        // Transform data pentru a fi mai ușor de folosit în frontend
+        // Transform data pentru a fi mai ușor de folosit în frontend 
         const transformedOrders = orders.map((order) => ({
             _id: (order._id as string | { toString(): string }).toString(),
             clientName: order.clientName,

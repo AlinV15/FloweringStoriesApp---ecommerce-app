@@ -3,25 +3,9 @@
 import Image from 'next/image';
 import { Pencil, Trash2, Tags, AlertCircle, BookOpen, Box, Flower } from 'lucide-react';
 import { memo, useState } from 'react';
-
+import { ProductEntry } from '@/app/types/index'; // Adjust the import path as needed
 // Updated to match your mongoose model
-interface ProductEntry {
-    _id: string;
-    type: 'book' | 'stationary' | 'flower';
-    refId: string;
-    typeRef: 'Book' | 'Stationary' | 'Flower';
-    price: number;
-    name: string;
-    discount?: number;
-    Description?: string;
-    subcategories?: Array<any>; // Allow for both string IDs and objects
-    image?: string;
-    stock: number;
-    reviews?: Array<any>;
-    createdAt?: string;
-    updatedAt?: string;
-    __v?: number; // Add version field that's mentioned in the error
-}
+
 
 interface Props {
     product: ProductEntry;

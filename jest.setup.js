@@ -83,3 +83,43 @@ Object.defineProperty(window, 'scrollTo', {
 afterEach(() => {
     jest.clearAllMocks()
 })
+
+// Mock window.alert și window.confirm
+global.alert = jest.fn()
+global.confirm = jest.fn()
+
+// Mock window.location mai complet
+delete window.location
+window.location = {
+    href: 'http://localhost:3000',
+    origin: 'http://localhost:3000',
+    protocol: 'http:',
+    host: 'localhost:3000',
+    hostname: 'localhost',
+    port: '3000',
+    pathname: '/',
+    search: '',
+    hash: '',
+    assign: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+}
+
+// Suprima warning-urile jsdom specifice
+const originalError = console.error
+beforeAll(() => {
+    console.error = (...args) => {
+        if (
+            typeof args[0] === 'string' &&
+            (args[0].includes('Not implemented: navigation') ||
+                args[0].includes('Not implemented: window.alert'))
+        ) {
+            return
+        }
+        originalError.call(console, ...args)
+    }
+})
+
+afterAll(() => {
+    console.error = originalError
+})

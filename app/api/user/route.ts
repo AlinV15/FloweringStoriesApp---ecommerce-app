@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         await connectToDatabase();
         const body = await req.json();
 
-        // Enhanced validation
+
         const registerSchema = z.object({
             email: z.string().email().max(255),
             password: z.string()

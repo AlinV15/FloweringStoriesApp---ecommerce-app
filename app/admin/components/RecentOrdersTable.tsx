@@ -372,8 +372,8 @@ export const RecentOrdersTable = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.deliveryMethod === 'pickup'
-                                                ? 'bg-purple-100 text-purple-800'
-                                                : 'bg-indigo-100 text-indigo-800'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : 'bg-indigo-100 text-indigo-800'
                                             }`}>
                                             {order.deliveryMethod === 'pickup' ? '📦 Pickup' : '🚚 Courier'}
                                         </span>

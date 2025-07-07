@@ -8,12 +8,12 @@ async function checkMaintenanceMode(request: NextRequest) {
     if (request.nextUrl.pathname.startsWith('/admin') ||
         request.nextUrl.pathname.startsWith('/api') ||
         request.nextUrl.pathname.startsWith('/_next') ||
-        request.nextUrl.pathname.startsWith('/auth') ||  // ✅ Adăugat
+        request.nextUrl.pathname.startsWith('/auth') ||  
         request.nextUrl.pathname === '/maintenance' ||
-        request.nextUrl.pathname === '/login' ||         // ✅ Adăugat
-        request.nextUrl.pathname === '/register' ||      // ✅ Adăugat
-        request.nextUrl.pathname === '/forgot-password' ||  // ✅ Adăugat
-        request.nextUrl.pathname === '/reset-password') {   // ✅ Adăugat
+        request.nextUrl.pathname === '/login' ||         
+        request.nextUrl.pathname === '/register' ||     
+        request.nextUrl.pathname === '/forgot-password' || 
+        request.nextUrl.pathname === '/reset-password') {   
         return null;
     }
 

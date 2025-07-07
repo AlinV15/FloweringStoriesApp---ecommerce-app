@@ -14,35 +14,100 @@ const DeleteConfirmModal = ({ productId, onClose, type }: Props) => {
 
     const handleDelete = async () => {
         let res;
+
+        // Găsește refId-ul corect, exact ca în ProductFormModal
+        let actualProductId = productId;
+
+        // Dacă avem acces la store, încearcă să găsești refId-ul corect
+        try {
+            const { rawProducts } = useProductStore.getState();
+            const rawProduct = rawProducts.find(p => p._id === productId);
+
+            if (rawProduct?.refId) {
+                actualProductId = rawProduct.refId;
+                console.log('✅ Using refId from rawProduct:', actualProductId, 'instead of _id:', productId);
+            } else {
+                console.log('⚠️ No rawProduct found, using original productId:', productId);
+            }
+        } catch (storeError) {
+            console.log('⚠️ Could not access store, using original productId:', productId);
+        }
+
+        // Debug: verifică ce ID trimiți
+        console.log('🔍 DELETE DEBUG:', {
+            originalProductId: productId,
+            actualProductId,
+            type,
+            endpoint: `/api/product/${type}/${actualProductId}`,
+            expectedRefId: '686bcc3b826c91526a9cc0db', // Pentru comparație
+            receivedId: actualProductId === '686bcc3b826c91526a9cc0db' ? 'CORRECT refId' : 'WRONG _id'
+        });
+
+        // Loader/loading state
+        const loadingToast = toast.loading('Deleting product...');
+
         try {
             switch (type) {
                 case 'book':
-                    res = await fetch(`/api/product/book/${productId}`, {
+                    res = await fetch(`/api/product/book/${actualProductId}`, {
                         method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
                     });
                     break;
                 case 'flower':
-                    res = await fetch(`/api/product/flower/${productId}`, {
+                    res = await fetch(`/api/product/flower/${actualProductId}`, {
                         method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
                     });
                     break;
                 case 'stationary':
-                    res = await fetch(`/api/product/stationary/${productId}`, {
+                    res = await fetch(`/api/product/stationary/${actualProductId}`, {
                         method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
                     });
                     break;
-                default: res = null
+                default:
+                    throw new Error(`Invalid product type: ${type}`);
             }
-            if (res) {
-                toast.success('Product deleted successfully!');
-                fetchProducts();
-                onClose();
-            } else {
-                throw new Error();
+
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+
+            // Verifică statusul răspunsului
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
             }
+
+            // Verifică dacă răspunsul este valid JSON
+            const responseData = await res.json();
+            console.log('Delete response:', responseData);
+            console.log('Deleted product type:', type, 'with ID:', productId);
+
+            toast.success('Product deleted successfully!');
+            await fetchProducts(); // Așteaptă refresh-ul
+            onClose();
+
         } catch (err) {
+            // Dismiss loading toast în caz de eroare
+            toast.dismiss(loadingToast);
+
             console.error("Error during deletion:", err);
-            const errorMessage = err instanceof Error ? err.message : 'An error occurred while deleting';
+
+            let errorMessage = 'An error occurred while deleting the product';
+
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+
             toast.error(errorMessage);
         }
     };
